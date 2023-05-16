@@ -4,8 +4,8 @@ services:
   api:
     # image: langgenius/dify-api:latest
     build:
-      context: ../
-      dockerfile: ./api/Dockerfile
+      context: ../api
+      # dockerfile: ./api/Dockerfile
     restart: always
     environment:
       # Startup mode, 'api' starts the API server.
@@ -111,8 +111,8 @@ services:
   worker:
     # image: langgenius/dify-api:latest
     build:
-      context: ../
-      dockerfile: ./api/Dockerfile
+      context: ../api
+      # dockerfile: ./api/Dockerfile
     restart: always
     environment:
       # Startup mode, 'worker' starts the Celery worker for processing the queue.
@@ -158,8 +158,8 @@ services:
   web:
     # image: langgenius/dify-web:latest
     build:
-      context: ../
-      dockerfile: ./web/Dockerfile
+      context: ../web
+      # dockerfile: ./web/Dockerfile
     restart: always
     environment:
       EDITION: SELF_HOSTED
