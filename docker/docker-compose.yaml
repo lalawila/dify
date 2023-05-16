@@ -2,7 +2,10 @@ version: '3.1'
 services:
   # API service
   api:
-    image: langgenius/dify-api:latest
+    # image: langgenius/dify-api:latest
+    build:
+      context: ../
+      dockerfile: ./api/Dockerfile
     restart: always
     environment:
       # Startup mode, 'api' starts the API server.
@@ -106,7 +109,10 @@ services:
   # worker service
   # The Celery worker for processing the queue.
   worker:
-    image: langgenius/dify-api:latest
+    # image: langgenius/dify-api:latest
+    build:
+      context: ../
+      dockerfile: ./api/Dockerfile
     restart: always
     environment:
       # Startup mode, 'worker' starts the Celery worker for processing the queue.
@@ -150,7 +156,10 @@ services:
 
   # Frontend web application.
   web:
-    image: langgenius/dify-web:latest
+    # image: langgenius/dify-web:latest
+    build:
+      context: ../
+      dockerfile: ./web/Dockerfile
     restart: always
     environment:
       EDITION: SELF_HOSTED
