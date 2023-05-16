@@ -1,11 +1,11 @@
 # 贡献
 
-感谢您对 [Dify](https://dify.ai) 的兴趣，并希望您能够做出贡献！在开始之前，请先阅读[行为准则](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md)并查看[现有问题](https://github.com/langgenius/dify/issues)。
-本文档介绍了如何设置开发环境以构建和测试 [Dify](https://dify.ai)。
+感谢您对 [QiyeGPT](https://dify.ai) 的兴趣，并希望您能够做出贡献！在开始之前，请先阅读[行为准则](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md)并查看[现有问题](https://github.com/langgenius/dify/issues)。
+本文档介绍了如何设置开发环境以构建和测试 [QiyeGPT](https://dify.ai)。
 
 ### 安装依赖项
 
-您需要在计算机上安装和配置以下依赖项才能构建 [Dify](https://dify.ai)：
+您需要在计算机上安装和配置以下依赖项才能构建 [QiyeGPT](https://dify.ai)：
 
 - [Git](http://git-scm.com/)
 - [Docker](https://www.docker.com/)
@@ -38,13 +38,13 @@ git clone git@github.com:<github_username>/dify.git
 
 要了解如何安装前端应用程序，请参阅[前端 README](web/README.md)。
 
-### 在浏览器中访问 Dify
+### 在浏览器中访问 QiyeGPT
 
-最后，您现在可以访问 [http://localhost:3000](http://localhost:3000) 在本地环境中查看 [Dify](https://dify.ai)。
+最后，您现在可以访问 [http://localhost:3000](http://localhost:3000) 在本地环境中查看 [QiyeGPT](https://dify.ai)。
 
 ## 创建拉取请求
 
-在进行更改后，打开一个拉取请求（PR）。提交拉取请求后，Dify 团队/社区的其他人将与您一起审查它。
+在进行更改后，打开一个拉取请求（PR）。提交拉取请求后，QiyeGPT 团队/社区的其他人将与您一起审查它。
 
 如果遇到问题，比如合并冲突或不知道如何打开拉取请求，请查看 GitHub 的[拉取请求教程](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests)，了解如何解决合并冲突和其他问题。一旦您的 PR 被合并，您将自豪地被列为[贡献者表](https://github.com/langgenius/dify/graphs/contributors)中的一员。
 

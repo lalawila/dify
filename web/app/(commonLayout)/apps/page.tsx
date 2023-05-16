@@ -30,7 +30,7 @@ const AppList = async () => {
 }
 
 export const metadata = {
-  title: 'Apps - Dify',
+  title: 'Apps - QiyeGPT',
 }
 
 export default AppList

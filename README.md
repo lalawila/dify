@@ -6,14 +6,14 @@
 
 [Website](https://dify.ai) • [Docs](https://docs.dify.ai) • [Twitter](https://twitter.com/dify_ai) • [Discord](https://discord.gg/FngNHpbcY7)
 
-**Dify** is an easy-to-use LLMOps platform designed to empower more people to create sustainable, AI-native applications. With visual orchestration for various application types, Dify offers out-of-the-box, ready-to-use applications that can also serve as Backend-as-a-Service APIs. Unify your development process with one API for plugins and datasets integration, and streamline your operations using a single interface for prompt engineering, visual analytics, and continuous improvement.
+**QiyeGPT** is an easy-to-use LLMOps platform designed to empower more people to create sustainable, AI-native applications. With visual orchestration for various application types, QiyeGPT offers out-of-the-box, ready-to-use applications that can also serve as Backend-as-a-Service APIs. Unify your development process with one API for plugins and datasets integration, and streamline your operations using a single interface for prompt engineering, visual analytics, and continuous improvement.
 
-Applications created with Dify include:
+Applications created with QiyeGPT include:
 
 Out-of-the-box web sites supporting form mode and chat conversation mode
 A single API encompassing plugin capabilities, context enhancement, and more, saving you backend coding effort
 Visual data analysis, log review, and annotation for applications
-Dify is compatible with Langchain, meaning we'll gradually support multiple LLMs, currently supported:
+QiyeGPT is compatible with Langchain, meaning we'll gradually support multiple LLMs, currently supported:
 
 - GPT 3 (text-davinci-003)
 - GPT 3.5 Turbo(ChatGPT)
@@ -21,27 +21,27 @@ Dify is compatible with Langchain, meaning we'll gradually support multiple LLMs
 
 ## Use Cloud Services
 
-Visit [Dify.ai](https://dify.ai)
+Visit [QiyeGPT.ai](https://dify.ai)
 
 ## Install the Community Edition
 
 ### System Requirements
 
-Before installing Dify, make sure your machine meets the following minimum system requirements:
+Before installing QiyeGPT, make sure your machine meets the following minimum system requirements:
 
 - CPU >= 1 Core
 - RAM >= 4GB
 
 ### Quick Start
 
-The easiest way to start the Dify server is to run our [docker-compose.yml](docker/docker-compose.yaml) file. Before running the installation command, make sure that [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) are installed on your machine:
+The easiest way to start the QiyeGPT server is to run our [docker-compose.yml](docker/docker-compose.yaml) file. Before running the installation command, make sure that [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) are installed on your machine:
 
 ```bash
 cd docker
 docker-compose up -d
 ```
 
-After running, you can access the Dify dashboard in your browser at [http://localhost/install](http://localhost/install) and start the initialization installation process.
+After running, you can access the QiyeGPT dashboard in your browser at [http://localhost/install](http://localhost/install) and start the initialization installation process.
 
 ### Configuration
 
@@ -53,19 +53,19 @@ Features under development:
 
 - **Datasets**, supporting more datasets, e.g. syncing content from Notion or webpages
 We will support more datasets, including text, webpages, and even Notion content. Users can build AI applications based on their own data sources.
-- **Plugins**, introducing ChatGPT Plugin-standard plugins for applications, or using Dify-produced plugins
-We will release plugins complying with ChatGPT standard, or Dify's own plugins to enable more capabilities in applications. 
+- **Plugins**, introducing ChatGPT Plugin-standard plugins for applications, or using QiyeGPT-produced plugins
+We will release plugins complying with ChatGPT standard, or QiyeGPT's own plugins to enable more capabilities in applications. 
 - **Open-source models**, e.g. adopting Llama as a model provider or for further fine-tuning
 We will work with excellent open-source models like Llama, by providing them as model options in our platform, or using them for further fine-tuning.
 
 
 ## Q&A
 
-**Q: What can I do with Dify?**
+**Q: What can I do with QiyeGPT?**
 
-A: Dify is a simple yet powerful LLM development and operations tool. You can use it to build commercial-grade applications, personal assistants. If you want to develop your own applications, LangDifyGenius can save you backend work in integrating with OpenAI and offer visual operations capabilities, allowing you to continuously improve and train your GPT model.
+A: QiyeGPT is a simple yet powerful LLM development and operations tool. You can use it to build commercial-grade applications, personal assistants. If you want to develop your own applications, LangQiyeGPTGenius can save you backend work in integrating with OpenAI and offer visual operations capabilities, allowing you to continuously improve and train your GPT model.
 
-**Q: How do I use Dify to "train" my own model?**
+**Q: How do I use QiyeGPT to "train" my own model?**
 
 A: A valuable application consists of Prompt Engineering, context enhancement, and Fine-tuning. We've created a hybrid programming approach combining Prompts with programming languages (similar to a template engine), making it easy to accomplish long-text embedding or capturing subtitles from a user-input Youtube video - all of which will be submitted as context for LLMs to process. We place great emphasis on application operability, with data generated by users during App usage available for analysis, annotation, and continuous training. Without the right tools, these steps can be time-consuming.
 
@@ -112,4 +112,4 @@ For more information, please refer to the official website or license text of th
 
 ## License
 
-This repository is available under the [Dify Open Source License](LICENSE).
+This repository is available under the [QiyeGPT Open Source License](LICENSE).

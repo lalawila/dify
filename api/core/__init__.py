@@ -10,7 +10,7 @@ from llama_index import IndexStructType, QueryMode
 from llama_index.indices.registry import INDEX_STRUT_TYPE_TO_QUERY_MAP
 from pydantic import BaseModel
 
-from core.callback_handler.std_out_callback_handler import DifyStdOutCallbackHandler
+from core.callback_handler.std_out_callback_handler import QiyeGPTStdOutCallbackHandler
 from core.index.keyword_table.jieba_keyword_table import GPTJIEBAKeywordTableIndex
 from core.index.keyword_table.stopwords import STOPWORDS
 from core.prompt.prompt_template import OneLineFormatter
@@ -46,7 +46,7 @@ def init_app(app: Flask):
 
     if os.environ.get("DEBUG") and os.environ.get("DEBUG").lower() == 'true':
         langchain.verbose = True
-        set_handler(DifyStdOutCallbackHandler())
+        set_handler(QiyeGPTStdOutCallbackHandler())
 
     if app.config.get("OPENAI_API_KEY"):
         hosted_llm_credentials.openai = HostedOpenAICredential(api_key=app.config.get("OPENAI_API_KEY"))

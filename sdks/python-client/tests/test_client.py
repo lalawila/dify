@@ -1,6 +1,6 @@
 import os
 import unittest
-from dify_client.client import ChatClient, CompletionClient, DifyClient
+from dify_client.client import ChatClient, CompletionClient, QiyeGPTClient
 
 API_KEY = os.environ.get("API_KEY")
 APP_ID = os.environ.get("APP_ID")
@@ -32,9 +32,9 @@ class TestCompletionClient(unittest.TestCase):
         self.assertIn("message_id", response)
 
 
-class TestDifyClient(unittest.TestCase):
+class TestQiyeGPTClient(unittest.TestCase):
     def setUp(self):
-        self.dify_client = DifyClient(API_KEY)
+        self.dify_client = QiyeGPTClient(API_KEY)
 
     def test_message_feedback(self):
         response = self.dify_client.message_feedback("test_message_id", 5, "test_user")

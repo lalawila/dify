@@ -4,7 +4,7 @@ require 'vendor/autoload.php';
 
 use GuzzleHttp\Client;
 
-class DifyClient {
+class QiyeGPTClient {
     protected $api_key;
     protected $base_url;
     protected $client;
@@ -46,7 +46,7 @@ class DifyClient {
     }
 }
 
-class CompletionClient extends DifyClient {
+class CompletionClient extends QiyeGPTClient {
     public function create_completion_message($inputs, $query, $response_mode, $user) {
         $data = [
             'inputs' => $inputs,
@@ -58,7 +58,7 @@ class CompletionClient extends DifyClient {
     }
 }
 
-class ChatClient extends DifyClient {
+class ChatClient extends QiyeGPTClient {
     public function create_chat_message($inputs, $query, $user, $response_mode = 'blocking', $conversation_id = null) {
         $data = [
             'inputs' => $inputs,

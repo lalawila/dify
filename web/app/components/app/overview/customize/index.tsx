@@ -73,7 +73,7 @@ const CustomizeModal: FC<IShareLinkProps> = ({
           <div className='text-gray-500 text-xs mt-1 mb-2'>{t(`${prefixCustomize}.way1.step2Tip`)}</div>
           <pre className='box-border py-3 px-4 bg-gray-100 text-xs font-medium rounded-lg'>
             export const APP_ID = '{appId}'<br />
-            export const API_KEY = {`'<Web API Key From Dify>'`}
+            export const API_KEY = {`'<Web API Key From QiyeGPT>'`}
           </pre>
         </div>
       </div>

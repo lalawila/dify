@@ -34,7 +34,7 @@ export const routes = {
 
 }
 
-export class DifyClient {
+export class QiyeGPTClient {
   constructor(apiKey, baseUrl = BASE_URL) {
     this.apiKey = apiKey
     this.baseUrl = baseUrl
@@ -86,7 +86,7 @@ export class DifyClient {
   }
 }
 
-export class CompletionClient extends DifyClient {
+export class CompletionClient extends QiyeGPTClient {
   createCompletionMessage(inputs, query, user, responseMode) {
     const data = {
       inputs,
@@ -98,7 +98,7 @@ export class CompletionClient extends DifyClient {
   }
 }
 
-export class ChatClient extends DifyClient {
+export class ChatClient extends QiyeGPTClient {
   createChatMessage(inputs, query, user, responseMode = 'blocking', conversationId = null) {
     const data = {
       inputs,

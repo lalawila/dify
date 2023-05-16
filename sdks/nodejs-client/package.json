@@ -1,12 +1,12 @@
 {
   "name": "dify-client",
   "version": "1.0.3",
-  "description": "This is the Node.js SDK for the Dify.AI API, which allows you to easily integrate Dify.AI into your Node.js applications.",
+  "description": "This is the Node.js SDK for the QiyeGPT.AI API, which allows you to easily integrate QiyeGPT.AI into your Node.js applications.",
   "main": "index.js",
   "type": "module",
   "keywords": [
-    "Dify",
-    "Dify.AI",
+    "QiyeGPT",
+    "QiyeGPT.AI",
     "LLM"
   ],
   "author": "Joel",

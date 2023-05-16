@@ -7,7 +7,7 @@ from langchain.memory.chat_memory import BaseChatMemory
 
 from core.callback_handler.agent_loop_gather_callback_handler import AgentLoopGatherCallbackHandler
 from core.callback_handler.dataset_tool_callback_handler import DatasetToolCallbackHandler
-from core.callback_handler.std_out_callback_handler import DifyStdOutCallbackHandler
+from core.callback_handler.std_out_callback_handler import QiyeGPTStdOutCallbackHandler
 from core.llm.llm_builder import LLMBuilder
 
 
@@ -16,7 +16,7 @@ class AgentBuilder:
     def to_agent_chain(cls, tenant_id: str, tools, memory: Optional[BaseChatMemory],
                        dataset_tool_callback_handler: DatasetToolCallbackHandler,
                        agent_loop_gather_callback_handler: AgentLoopGatherCallbackHandler):
-        llm_callback_manager = CallbackManager([agent_loop_gather_callback_handler, DifyStdOutCallbackHandler()])
+        llm_callback_manager = CallbackManager([agent_loop_gather_callback_handler, QiyeGPTStdOutCallbackHandler()])
         llm = LLMBuilder.to_llm(
             tenant_id=tenant_id,
             model_name=agent_loop_gather_callback_handler.model_name,
@@ -28,7 +28,7 @@ class AgentBuilder:
         tool_callback_manager = CallbackManager([
             agent_loop_gather_callback_handler,
             dataset_tool_callback_handler,
-            DifyStdOutCallbackHandler()
+            QiyeGPTStdOutCallbackHandler()
         ])
 
         for tool in tools:
@@ -47,7 +47,7 @@ class AgentBuilder:
         agent = cls.build_agent(agent_llm_chain=agent_llm_chain, memory=memory)
 
         agent_callback_manager = CallbackManager(
-            [agent_loop_gather_callback_handler, DifyStdOutCallbackHandler()]
+            [agent_loop_gather_callback_handler, QiyeGPTStdOutCallbackHandler()]
         )
 
         agent_chain = AgentExecutor.from_agent_and_tools(

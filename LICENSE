@@ -1,10 +1,10 @@
-# Dify Open Source License
+# QiyeGPT Open Source License
 
-The Dify project uses a combination of the Apache License 2.0, MIT License, and an additional agreement to protect against direct competition with Dify Cloud services.
+The QiyeGPT project uses a combination of the Apache License 2.0, MIT License, and an additional agreement to protect against direct competition with QiyeGPT Cloud services.
 
 As a contributor, you should agree that your contributed code:
 a. Might be subject to a more permissive open source license in the future.
-b. Can be used for commercial purposes, such as Dify's cloud business.
+b. Can be used for commercial purposes, such as QiyeGPT's cloud business.
 
 The following components are open source under the MIT license, allowing you to build and develop applications based on them:
 - WebApp elements, e.g., web/app/components/share
@@ -12,10 +12,10 @@ The following components are open source under the MIT license, allowing you to 
 
 The remaining parts of the project are open source under the Apache License 2.0.
 
-With the Apache License 2.0, MIT License, and this supplementary agreement, anyone can freely use, modify, and distribute Dify, provided that:
+With the Apache License 2.0, MIT License, and this supplementary agreement, anyone can freely use, modify, and distribute QiyeGPT, provided that:
 
-- If you use Dify solely as a backend service for other applications, no authorization is needed for commercial or closed source purposes.
-- If you wish to use Dify for commercial and closed source SaaS services similar to Dify Cloud, please contact us for authorization.
+- If you use QiyeGPT solely as a backend service for other applications, no authorization is needed for commercial or closed source purposes.
+- If you wish to use QiyeGPT for commercial and closed source SaaS services similar to QiyeGPT Cloud, please contact us for authorization.
 
 The interactive design of this product is protected by appearance patent.
 

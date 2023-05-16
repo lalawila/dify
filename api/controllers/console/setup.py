@@ -6,7 +6,7 @@ from flask import request, current_app
 from flask_restful import Resource, reqparse
 
 from extensions.ext_database import db
-from models.model import DifySetup
+from models.model import QiyeGPTSetup
 from services.account_service import AccountService, TenantService, RegisterService
 
 from libs.helper import email, str_len
@@ -66,7 +66,7 @@ class SetupApi(Resource):
 
 
 def setup():
-    dify_setup = DifySetup(
+    dify_setup = QiyeGPTSetup(
         version=current_app.config['CURRENT_VERSION']
     )
     db.session.add(dify_setup)
@@ -86,7 +86,7 @@ def setup_required(view):
 
 def get_setup_status():
     if current_app.config['EDITION'] == 'SELF_HOSTED':
-        return DifySetup.query.first()
+        return QiyeGPTSetup.query.first()
     else:
         return True
 

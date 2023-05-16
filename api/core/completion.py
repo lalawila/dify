@@ -6,8 +6,8 @@ from langchain.llms import BaseLLM
 from langchain.schema import BaseMessage, BaseLanguageModel, HumanMessage
 from core.constant import llm_constant
 from core.callback_handler.llm_callback_handler import LLMCallbackHandler
-from core.callback_handler.std_out_callback_handler import DifyStreamingStdOutCallbackHandler, \
-    DifyStdOutCallbackHandler
+from core.callback_handler.std_out_callback_handler import QiyeGPTStreamingStdOutCallbackHandler, \
+    QiyeGPTStdOutCallbackHandler
 from core.conversation_message_task import ConversationMessageTask, ConversationTaskStoppedException
 from core.llm.error import LLMBadRequestError
 from core.llm.llm_builder import LLMBuilder
@@ -207,9 +207,9 @@ If you don't know the answer, just say that you don't know, don't try to make up
                                  streaming: bool, conversation_message_task: ConversationMessageTask) -> CallbackManager:
         llm_callback_handler = LLMCallbackHandler(llm, conversation_message_task)
         if streaming:
-            callback_handlers = [llm_callback_handler, DifyStreamingStdOutCallbackHandler()]
+            callback_handlers = [llm_callback_handler, QiyeGPTStreamingStdOutCallbackHandler()]
         else:
-            callback_handlers = [llm_callback_handler, DifyStdOutCallbackHandler()]
+            callback_handlers = [llm_callback_handler, QiyeGPTStdOutCallbackHandler()]
 
         return CallbackManager(callback_handlers)
 

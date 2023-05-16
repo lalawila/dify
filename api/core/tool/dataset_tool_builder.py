@@ -5,7 +5,7 @@ from llama_index.langchain_helpers.agents import IndexToolConfig
 
 from core.callback_handler.dataset_tool_callback_handler import DatasetToolCallbackHandler
 from core.callback_handler.index_tool_callback_handler import DatasetIndexToolCallbackHandler
-from core.callback_handler.std_out_callback_handler import DifyStdOutCallbackHandler
+from core.callback_handler.std_out_callback_handler import QiyeGPTStdOutCallbackHandler
 from core.index.keyword_table_index import KeywordTableIndex
 from core.index.vector_index import VectorIndex
 from core.prompt.prompts import QUERY_KEYWORD_EXTRACT_TEMPLATE
@@ -69,7 +69,7 @@ class DatasetToolBuilder:
             description=description,
             index_query_kwargs=query_kwargs,
             tool_kwargs={
-                "callback_manager": CallbackManager([callback_handler, DifyStdOutCallbackHandler()])
+                "callback_manager": CallbackManager([callback_handler, QiyeGPTStdOutCallbackHandler()])
             },
             # tool_kwargs={"return_direct": True},
             # return_direct: Whether to return LLM results directly or process the output data with an Output Parser

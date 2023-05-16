@@ -6,7 +6,7 @@ from langchain.input import print_text
 from langchain.schema import AgentAction, AgentFinish, LLMResult
 
 
-class DifyStdOutCallbackHandler(BaseCallbackHandler):
+class QiyeGPTStdOutCallbackHandler(BaseCallbackHandler):
     """Callback Handler that prints to std out."""
 
     def __init__(self, color: Optional[str] = None) -> None:
@@ -118,7 +118,7 @@ class DifyStdOutCallbackHandler(BaseCallbackHandler):
         print_text("[on_agent_finish] " + finish.return_values['output'] + "\n", color='green', end="\n")
 
 
-class DifyStreamingStdOutCallbackHandler(DifyStdOutCallbackHandler):
+class QiyeGPTStreamingStdOutCallbackHandler(QiyeGPTStdOutCallbackHandler):
     """Callback handler for streaming. Only works with LLMs that support streaming."""
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:

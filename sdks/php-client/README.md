@@ -1,6 +1,6 @@
-# Dify PHP SDK
+# QiyeGPT PHP SDK
 
-This is the PHP SDK for the Dify API, which allows you to easily integrate Dify into your PHP applications.
+This is the PHP SDK for the QiyeGPT API, which allows you to easily integrate QiyeGPT into your PHP applications.
 
 ## Requirements
 
@@ -16,13 +16,13 @@ After installing the SDK, you can use it in your project like this:
 
 require 'vendor/autoload.php';
 
-use YourVendorName\DifyPHP\DifyClient;
-use YourVendorName\DifyPHP\CompletionClient;
-use YourVendorName\DifyPHP\ChatClient;
+use YourVendorName\QiyeGPTPHP\QiyeGPTClient;
+use YourVendorName\QiyeGPTPHP\CompletionClient;
+use YourVendorName\QiyeGPTPHP\ChatClient;
 
 $apiKey = 'your-api-key-here';
 
-$difyClient = new DifyClient($apiKey);
+$difyClient = new QiyeGPTClient($apiKey);
 
 // Create a completion client
 $completionClient = new CompletionClient($apiKey);
@@ -44,7 +44,7 @@ $response = $difyClient->message_feedback($message_id, $rating, $user);
 // - rename_conversation()
 ```
 
-Replace 'your-api-key-here' with your actual Dify API key.
+Replace 'your-api-key-here' with your actual QiyeGPT API key.
 
 ## License
 
