@@ -1,0 +1,19 @@
+name: remote deploy
+
+on: [push]
+jobs:
+    build:
+        name: DEPLOY
+        runs-on: ubuntu-latest
+        steps:
+            - name: executing remote ssh commands using password
+              uses: appleboy/ssh-action@v0.1.8
+              with:
+                  host: 8.219.239.133
+                  username: root
+                  key: ${{ secrets.KEY }}
+                  script: |
+                      cd project/diff/docker
+                      git pull
+                      docker system prune
+                      docker compose up  --no-deps --build -d
