@@ -124,7 +124,7 @@ const InstallForm = () => {
               </div>
             </div> */}
             {/*  agree to our Terms and Privacy Policy. */}
-            <div className="block mt-6 text-xs text-gray-600">
+            {/* <div className="block mt-6 text-xs text-gray-600">
               {t('login.tosDesc')}
               &nbsp;
               <Link
@@ -138,7 +138,7 @@ const InstallForm = () => {
                 target={'_blank'}
                 href='https://langgenius.ai/privacy-policy'
               >{t('login.pp')}</Link>
-            </div>
+            </div> */}
 
             <div>
               <Button type='primary' onClick={handleSetting}>

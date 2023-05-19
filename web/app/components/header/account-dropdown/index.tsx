@@ -89,7 +89,8 @@ export default function AppSelector({ userProfile, onLogout, langeniusVersionInf
                 <Link
                   className={classNames(itemClassName, 'group justify-between')}
                   href={
-                    locale === 'zh-Hans' ? 'https://docs.dify.ai/v/zh-hans/' : 'https://docs.dify.ai/'
+                    // locale === 'zh-Hans' ? 'https://docs.dify.ai/v/zh-hans/' : 'https://docs.dify.ai/'
+                    'https://docs.qq.com/doc/p/1ba004db7ac019e79831e6059b530f3080c0e9e1'
                   }
                   target='_blank'>
                   <div>{t('common.userProfile.helpCenter')}</div>

@@ -16,6 +16,9 @@ const LocaleLayout = ({
   const locale = getLocaleOnServer()
   return (
     <html lang={locale ?? 'en'} className="h-full">
+      <head>
+        <link rel="icon" href="/logo.png" />
+      </head>
       <body
         className="h-full"
         data-api-prefix={process.env.NEXT_PUBLIC_API_PREFIX}
