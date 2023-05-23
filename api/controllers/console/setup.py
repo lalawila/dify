@@ -56,7 +56,7 @@ class SetupApi(Resource):
             password=args['password']
         )
 
-        setup()
+        # setup()
 
         # Login
         flask_login.login_user(account)
