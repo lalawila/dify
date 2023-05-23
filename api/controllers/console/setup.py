@@ -32,13 +32,13 @@ class SetupApi(Resource):
     @only_edition_self_hosted
     def post(self):
         # is set up
-        if get_setup_status():
-            raise AlreadySetupError()
+        # if get_setup_status():
+        #     raise AlreadySetupError()
 
-        # is tenant created
-        tenant_count = TenantService.get_tenant_count()
-        if tenant_count > 0:
-            raise AlreadySetupError()
+        # # is tenant created
+        # tenant_count = TenantService.get_tenant_count()
+        # if tenant_count > 0:
+        #     raise AlreadySetupError()
 
         parser = reqparse.RequestParser()
         parser.add_argument('email', type=email,
