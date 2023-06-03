@@ -304,6 +304,8 @@ const Welcome: FC<IWelcomeProps> = ({
       </div>)
   }
 
+  console.log("handleChat")
+  handleChat()
   return (
     <div className='relative mobile:min-h-[48px] tablet:min-h-[64px]'>
       {hasSetInputs && renderHeader()}
