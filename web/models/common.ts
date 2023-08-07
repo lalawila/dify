@@ -6,10 +6,17 @@ export type OauthResponse = {
   redirect_url: string
 }
 
+export type SetupStatusResponse = {
+  step: 'finished' | 'not_started'
+  setup_at?: Date
+}
+
 export type UserProfileResponse = {
   id: string
   name: string
   email: string
+  avatar: string
+  is_password_set: boolean
   interface_language?: string
   interface_theme?: string
   timezone?: string
@@ -54,20 +61,34 @@ export type Member = Pick<UserProfileResponse, 'id' | 'name' | 'email' | 'last_l
   role: 'owner' | 'admin' | 'normal'
 }
 
+export enum ProviderName {
+  OPENAI = 'openai',
+  AZURE_OPENAI = 'azure_openai',
+  ANTHROPIC = 'anthropic',
+}
 export type ProviderAzureToken = {
-  azure_api_base: string
-  azure_api_key: string
-  azure_api_type: string
-  azure_api_version: string
+  openai_api_base?: string
+  openai_api_key?: string
+}
+export type ProviderAnthropicToken = {
+  anthropic_api_key?: string
+}
+export type ProviderTokenType = {
+  [ProviderName.OPENAI]: string
+  [ProviderName.AZURE_OPENAI]: ProviderAzureToken
+  [ProviderName.ANTHROPIC]: ProviderAnthropicToken
 }
 export type Provider = {
-  provider_name: string
-  provider_type: string
-  is_valid: boolean
-  is_enabled: boolean
-  last_used: string
-  token?: string | ProviderAzureToken
-}
+  [Name in ProviderName]: {
+    provider_name: Name
+  } & {
+    provider_type: 'custom' | 'system'
+    is_valid: boolean
+    is_enabled: boolean
+    last_used: string
+    token?: ProviderTokenType[Name]
+  }
+}[ProviderName]
 
 export type ProviderHosted = Provider & {
   quota_type: string
@@ -82,11 +103,55 @@ export type AccountIntegrate = {
   link: string
 }
 
-export interface IWorkspace {
+export type IWorkspace = {
   id: string
   name: string
   plan: string
   status: string
   created_at: number
   current: boolean
+}
+
+export type DataSourceNotionPage = {
+  page_icon: null | {
+    type: string | null
+    url: string | null
+    emoji: string | null
+  }
+  page_id: string
+  page_name: string
+  parent_id: string
+  type: string
+  is_bound: boolean
+}
+
+export type DataSourceNotionPageMap = Record<string, DataSourceNotionPage & { workspace_id: string }>
+
+export type DataSourceNotionWorkspace = {
+  workspace_name: string
+  workspace_id: string
+  workspace_icon: string | null
+  total?: number
+  pages: DataSourceNotionPage[]
+}
+
+export type DataSourceNotionWorkspaceMap = Record<string, DataSourceNotionWorkspace>
+
+export type DataSourceNotion = {
+  id: string
+  provider: string
+  is_bound: boolean
+  source_info: DataSourceNotionWorkspace
+}
+
+export type GithubRepo = {
+  stargazers_count: number
+}
+
+export type PluginProvider = {
+  tool_name: string
+  is_enabled: boolean
+  credentials: {
+    api_key: string
+  } | null
 }

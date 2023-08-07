@@ -22,14 +22,14 @@ To set up a working development environment, just fork the project git repositor
 
 ### Fork the repository
 
-you need to fork the [repository](https://github.com/langgenius/langgenius-gateway).
+you need to fork the [repository](https://github.com/langgenius/dify).
 
 ### Clone the repo
 
 Clone your GitHub forked repository:
 
 ```
-git clone git@github.com:<github_username>/langgenius-gateway.git
+git clone git@github.com:<github_username>/dify.git
 ```
 
 ### Install backend
@@ -54,3 +54,8 @@ Did you have an issue, like a merge conflict, or don't know how to open a pull r
 ## Community channels
 
 Stuck somewhere? Have any questions? Join the [Discord Community Server](https://discord.gg/AhzKf7dNgk). We are here to help!
+
+### i18n (Internationalization) Support
+
+We are looking for contributors to help with translations in other languages. If you are interested in helping, please join the [Discord Community Server](https://discord.gg/AhzKf7dNgk) and let us know.  
+Also check out the [Frontend i18n README]((web/i18n/README_EN.md)) for more information.

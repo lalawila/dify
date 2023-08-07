@@ -40,6 +40,7 @@ class App(db.Model):
     api_rph = db.Column(db.Integer, nullable=False)
     is_demo = db.Column(db.Boolean, nullable=False, server_default=db.text('false'))
     is_public = db.Column(db.Boolean, nullable=False, server_default=db.text('false'))
+    is_universal = db.Column(db.Boolean, nullable=False, server_default=db.text('false'))
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.text('CURRENT_TIMESTAMP(0)'))
     updated_at = db.Column(db.DateTime, nullable=False, server_default=db.text('CURRENT_TIMESTAMP(0)'))
 
@@ -56,7 +57,8 @@ class App(db.Model):
 
     @property
     def api_base_url(self):
-        return (current_app.config['API_URL'] if current_app.config['API_URL'] else request.host_url.rstrip('/')) + '/v1'
+        return (current_app.config['SERVICE_API_URL'] if current_app.config['SERVICE_API_URL']
+                else request.host_url.rstrip('/')) + '/v1'
 
     @property
     def tenant(self):
@@ -81,11 +83,13 @@ class AppModelConfig(db.Model):
     opening_statement = db.Column(db.Text)
     suggested_questions = db.Column(db.Text)
     suggested_questions_after_answer = db.Column(db.Text)
+    speech_to_text = db.Column(db.Text)
     more_like_this = db.Column(db.Text)
     model = db.Column(db.Text)
     user_input_form = db.Column(db.Text)
     pre_prompt = db.Column(db.Text)
     agent_mode = db.Column(db.Text)
+    sensitive_word_avoidance = db.Column(db.Text)
 
     @property
     def app(self):
@@ -104,10 +108,20 @@ class AppModelConfig(db.Model):
     def suggested_questions_after_answer_dict(self) -> dict:
         return json.loads(self.suggested_questions_after_answer) if self.suggested_questions_after_answer \
             else {"enabled": False}
+    
+    @property
+    def speech_to_text_dict(self) -> dict:
+        return json.loads(self.speech_to_text) if self.speech_to_text \
+            else {"enabled": False}
 
     @property
     def more_like_this_dict(self) -> dict:
         return json.loads(self.more_like_this) if self.more_like_this else {"enabled": False}
+
+    @property
+    def sensitive_word_avoidance_dict(self) -> dict:
+        return json.loads(self.sensitive_word_avoidance) if self.sensitive_word_avoidance \
+            else {"enabled": False, "words": [], "canned_response": []}
 
     @property
     def user_input_form_list(self) -> dict:
@@ -115,15 +129,31 @@ class AppModelConfig(db.Model):
 
     @property
     def agent_mode_dict(self) -> dict:
-        return json.loads(self.agent_mode) if self.agent_mode else {"enabled": False, "tools": []}
+        return json.loads(self.agent_mode) if self.agent_mode else {"enabled": False, "strategy": None, "tools": []}
 
+    def to_dict(self) -> dict:
+        return {
+            "provider": "",
+            "model_id": "",
+            "configs": {},
+            "opening_statement": self.opening_statement,
+            "suggested_questions": self.suggested_questions_list,
+            "suggested_questions_after_answer": self.suggested_questions_after_answer_dict,
+            "speech_to_text": self.speech_to_text_dict,
+            "more_like_this": self.more_like_this_dict,
+            "sensitive_word_avoidance": self.sensitive_word_avoidance_dict,
+            "model": self.model_dict,
+            "user_input_form": self.user_input_form_list,
+            "pre_prompt": self.pre_prompt,
+            "agent_mode": self.agent_mode_dict
+        }
 
 class RecommendedApp(db.Model):
     __tablename__ = 'recommended_apps'
     __table_args__ = (
         db.PrimaryKeyConstraint('id', name='recommended_app_pkey'),
         db.Index('recommended_app_app_id_idx', 'app_id'),
-        db.Index('recommended_app_is_listed_idx', 'is_listed')
+        db.Index('recommended_app_is_listed_idx', 'is_listed', 'language')
     )
 
     id = db.Column(UUID, primary_key=True, server_default=db.text('uuid_generate_v4()'))
@@ -135,6 +165,7 @@ class RecommendedApp(db.Model):
     position = db.Column(db.Integer, nullable=False, default=0)
     is_listed = db.Column(db.Boolean, nullable=False, default=True)
     install_count = db.Column(db.Integer, nullable=False, default=0)
+    language = db.Column(db.String(255), nullable=False, server_default=db.text("'en-US'::character varying"))
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.text('CURRENT_TIMESTAMP(0)'))
     updated_at = db.Column(db.DateTime, nullable=False, server_default=db.text('CURRENT_TIMESTAMP(0)'))
 
@@ -142,17 +173,6 @@ class RecommendedApp(db.Model):
     def app(self):
         app = db.session.query(App).filter(App.id == self.app_id).first()
         return app
-
-    # def set_description(self, lang, desc):
-    #     if self.description is None:
-    #         self.description = {}
-    #     self.description[lang] = desc
-
-    def get_description(self, lang):
-        if self.description and lang in self.description:
-            return self.description[lang]
-        else:
-            return self.description.get('en')
 
 
 class InstalledApp(db.Model):
@@ -216,6 +236,8 @@ class Conversation(db.Model):
     messages = db.relationship("Message", backref="conversation", lazy='select', passive_deletes="all")
     message_annotations = db.relationship("MessageAnnotation", backref="conversation", lazy='select', passive_deletes="all")
 
+    is_deleted = db.Column(db.Boolean, nullable=False, server_default=db.text('false'))
+
     @property
     def model_config(self):
         model_config = {}
@@ -231,8 +253,14 @@ class Conversation(db.Model):
                 model_config['suggested_questions_after_answer'] = override_model_configs[
                     'suggested_questions_after_answer'] \
                     if 'suggested_questions_after_answer' in override_model_configs else {"enabled": False}
+                model_config['speech_to_text'] = override_model_configs[
+                    'speech_to_text'] \
+                    if 'speech_to_text' in override_model_configs else {"enabled": False}
                 model_config['more_like_this'] = override_model_configs['more_like_this'] \
                     if 'more_like_this' in override_model_configs else {"enabled": False}
+                model_config['sensitive_word_avoidance'] = override_model_configs['sensitive_word_avoidance'] \
+                    if 'sensitive_word_avoidance' in override_model_configs \
+                    else {"enabled": False, "words": [], "canned_response": []}
                 model_config['user_input_form'] = override_model_configs['user_input_form']
             else:
                 model_config['configs'] = override_model_configs
@@ -247,7 +275,9 @@ class Conversation(db.Model):
             model_config['opening_statement'] = app_model_config.opening_statement
             model_config['suggested_questions'] = app_model_config.suggested_questions_list
             model_config['suggested_questions_after_answer'] = app_model_config.suggested_questions_after_answer_dict
+            model_config['speech_to_text'] = app_model_config.speech_to_text_dict
             model_config['more_like_this'] = app_model_config.more_like_this_dict
+            model_config['sensitive_word_avoidance'] = app_model_config.sensitive_word_avoidance_dict
             model_config['user_input_form'] = app_model_config.user_input_form_list
 
         model_config['model_id'] = self.model_id
@@ -314,6 +344,19 @@ class Conversation(db.Model):
     def app(self):
         return db.session.query(App).filter(App.id == self.app_id).first()
 
+    @property
+    def from_end_user_session_id(self):
+        if self.from_end_user_id:
+            end_user = db.session.query(EndUser).filter(EndUser.id == self.from_end_user_id).first()
+            if end_user:
+                return end_user.session_id
+
+        return None
+
+    @property
+    def in_debug_mode(self):
+        return self.override_model_configs is not None
+
 
 class Message(db.Model):
     __tablename__ = 'messages'
@@ -379,6 +422,15 @@ class Message(db.Model):
                 AppModelConfig.id == conversation.app_model_config_id).first()
 
         return None
+
+    @property
+    def in_debug_mode(self):
+        return self.override_model_configs is not None
+
+    @property
+    def agent_thoughts(self):
+        return db.session.query(MessageAgentThought).filter(MessageAgentThought.message_id == self.id)\
+            .order_by(MessageAgentThought.position.asc()).all()
 
 
 class MessageFeedback(db.Model):
@@ -505,7 +557,7 @@ class Site(db.Model):
 
     @property
     def app_base_url(self):
-        return (current_app.config['APP_URL'] if current_app.config['APP_URL'] else request.host_url.rstrip('/'))
+        return (current_app.config['APP_WEB_URL'] if current_app.config['APP_WEB_URL'] else request.host_url.rstrip('/'))
 
 
 class ApiToken(db.Model):

@@ -1,6 +1,6 @@
 .answerIcon {
   position: relative;
-  background: url(./icons/robot.svg);
+  background: url(./icons/robot.svg) 100%/100%;
 }
 
 .typeingIcon {
@@ -38,6 +38,31 @@
   background: url(./icons/answer.svg) no-repeat;
 }
 
+.copyBtn {
+  display: none;
+}
+
+.answerWrapWrap,
+.questionWrapWrap {
+  width: 0;
+  flex-grow: 1;
+}
+
+.questionWrapWrap {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.answerWrap,
+.question {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.answerWrap:hover .copyBtn {
+  display: block;
+}
+
 .answerWrap .itemOperation {
   display: none;
 }
@@ -54,7 +79,7 @@
 .textArea {
   padding-top: 13px;
   padding-bottom: 13px;
-  padding-right: 90px;
+  padding-right: 130px;
   border-radius: 12px;
   line-height: 20px;
   background-color: #fff;
@@ -75,6 +100,10 @@
 
 .sendBtn {
   background: url(./icons/send.svg) center center no-repeat;
+}
+
+.sendBtnActive {
+  background-image: url(./icons/send-active.svg);
 }
 
 .sendBtn:hover {

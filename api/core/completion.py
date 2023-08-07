@@ -1,37 +1,43 @@
-from typing import Optional, List, Union
+import logging
+import re
+from typing import Optional, List, Union, Tuple
 
-from langchain.callbacks import CallbackManager
+from langchain.base_language import BaseLanguageModel
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
-from langchain.schema import BaseMessage, BaseLanguageModel, HumanMessage
+from langchain.schema import BaseMessage, HumanMessage
+from requests.exceptions import ChunkedEncodingError
+
+from core.agent.agent_executor import AgentExecuteResult, PlanningStrategy
+from core.callback_handler.main_chain_gather_callback_handler import MainChainGatherCallbackHandler
 from core.constant import llm_constant
 from core.callback_handler.llm_callback_handler import LLMCallbackHandler
 from core.callback_handler.std_out_callback_handler import QiyeGPTStreamingStdOutCallbackHandler, \
     QiyeGPTStdOutCallbackHandler
 from core.conversation_message_task import ConversationMessageTask, ConversationTaskStoppedException
 from core.llm.error import LLMBadRequestError
+from core.llm.fake import FakeLLM
 from core.llm.llm_builder import LLMBuilder
-from core.chain.main_chain_builder import MainChainBuilder
 from core.llm.streamable_chat_open_ai import StreamableChatOpenAI
 from core.llm.streamable_open_ai import StreamableOpenAI
 from core.memory.read_only_conversation_token_db_buffer_shared_memory import \
     ReadOnlyConversationTokenDBBufferSharedMemory
-from core.memory.read_only_conversation_token_db_string_buffer_shared_memory import \
-    ReadOnlyConversationTokenDBStringBufferSharedMemory
+from core.orchestrator_rule_parser import OrchestratorRuleParser
 from core.prompt.prompt_builder import PromptBuilder
-from core.prompt.prompt_template import OutLinePromptTemplate
+from core.prompt.prompt_template import JinjaPromptTemplate
 from core.prompt.prompts import MORE_LIKE_THIS_GENERATE_PROMPT
-from models.model import App, AppModelConfig, Account, Conversation, Message
+from models.model import App, AppModelConfig, Account, Conversation, Message, EndUser
 
 
 class Completion:
     @classmethod
     def generate(cls, task_id: str, app: App, app_model_config: AppModelConfig, query: str, inputs: dict,
-                 user: Account, conversation: Optional[Conversation], streaming: bool, is_override: bool = False):
+                 user: Union[Account, EndUser], conversation: Optional[Conversation], streaming: bool, is_override: bool = False):
         """
         errors: ProviderTokenNotInitError
         """
-        cls.validate_query_tokens(app.tenant_id, app_model_config, query)
+        query = PromptBuilder.process_template(query)
 
         memory = None
         if conversation:
@@ -39,10 +45,19 @@ class Completion:
             memory = cls.get_memory_from_conversation(
                 tenant_id=app.tenant_id,
                 app_model_config=app_model_config,
-                conversation=conversation
+                conversation=conversation,
+                return_messages=False
             )
 
             inputs = conversation.inputs
+
+        rest_tokens_for_context_and_memory = cls.get_validate_rest_tokens(
+            mode=app.mode,
+            tenant_id=app.tenant_id,
+            app_model_config=app_model_config,
+            query=query,
+            inputs=inputs
+        )
 
         conversation_message_task = ConversationMessageTask(
             task_id=task_id,
@@ -56,17 +71,33 @@ class Completion:
             streaming=streaming
         )
 
-        # build main chain include agent
-        main_chain = MainChainBuilder.to_langchain_components(
+        chain_callback = MainChainGatherCallbackHandler(conversation_message_task)
+
+        # init orchestrator rule parser
+        orchestrator_rule_parser = OrchestratorRuleParser(
             tenant_id=app.tenant_id,
-            agent_mode=app_model_config.agent_mode_dict,
-            memory=ReadOnlyConversationTokenDBStringBufferSharedMemory(memory=memory) if memory else None,
-            conversation_message_task=conversation_message_task
+            app_model_config=app_model_config
         )
 
-        chain_output = ''
-        if main_chain:
-            chain_output = main_chain.run(query)
+        # parse sensitive_word_avoidance_chain
+        sensitive_word_avoidance_chain = orchestrator_rule_parser.to_sensitive_word_avoidance_chain([chain_callback])
+        if sensitive_word_avoidance_chain:
+            query = sensitive_word_avoidance_chain.run(query)
+
+        # get agent executor
+        agent_executor = orchestrator_rule_parser.to_agent_executor(
+            conversation_message_task=conversation_message_task,
+            memory=memory,
+            rest_tokens=rest_tokens_for_context_and_memory,
+            chain_callback=chain_callback
+        )
+
+        # run agent executor
+        agent_execute_result = None
+        if agent_executor:
+            should_use_agent = agent_executor.should_use_agent(query)
+            if should_use_agent:
+                agent_execute_result = agent_executor.run(query)
 
         # run the final llm
         try:
@@ -76,19 +107,35 @@ class Completion:
                 app_model_config=app_model_config,
                 query=query,
                 inputs=inputs,
-                chain_output=chain_output,
+                agent_execute_result=agent_execute_result,
                 conversation_message_task=conversation_message_task,
                 memory=memory,
                 streaming=streaming
             )
         except ConversationTaskStoppedException:
             return
+        except ChunkedEncodingError as e:
+            # Interrupt by LLM (like OpenAI), handle it.
+            logging.warning(f'ChunkedEncodingError: {e}')
+            conversation_message_task.end()
+            return
 
     @classmethod
     def run_final_llm(cls, tenant_id: str, mode: str, app_model_config: AppModelConfig, query: str, inputs: dict,
-                      chain_output: str,
+                      agent_execute_result: Optional[AgentExecuteResult],
                       conversation_message_task: ConversationMessageTask,
                       memory: Optional[ReadOnlyConversationTokenDBBufferSharedMemory], streaming: bool):
+        # When no extra pre prompt is specified,
+        # the output of the agent can be used directly as the main output content without calling LLM again
+        if not app_model_config.pre_prompt and agent_execute_result and agent_execute_result.output \
+                and agent_execute_result.strategy != PlanningStrategy.ROUTER:
+            final_llm = FakeLLM(response=agent_execute_result.output,
+                                origin_llm=agent_execute_result.configuration.llm,
+                                streaming=streaming)
+            final_llm.callbacks = cls.get_llm_callbacks(final_llm, streaming, conversation_message_task)
+            response = final_llm.generate([[HumanMessage(content=query)]])
+            return response
+
         final_llm = LLMBuilder.to_llm_from_model(
             tenant_id=tenant_id,
             model=app_model_config.model_dict,
@@ -96,48 +143,56 @@ class Completion:
         )
 
         # get llm prompt
-        prompt = cls.get_main_llm_prompt(
+        prompt, stop_words = cls.get_main_llm_prompt(
             mode=mode,
             llm=final_llm,
+            model=app_model_config.model_dict,
             pre_prompt=app_model_config.pre_prompt,
             query=query,
             inputs=inputs,
-            chain_output=chain_output,
+            agent_execute_result=agent_execute_result,
             memory=memory
         )
 
-        final_llm.callback_manager = cls.get_llm_callback_manager(final_llm, streaming, conversation_message_task)
+        final_llm.callbacks = cls.get_llm_callbacks(final_llm, streaming, conversation_message_task)
 
         cls.recale_llm_max_tokens(
             final_llm=final_llm,
+            model=app_model_config.model_dict,
             prompt=prompt,
             mode=mode
         )
 
-        response = final_llm.generate([prompt])
+        response = final_llm.generate([prompt], stop_words)
 
         return response
 
     @classmethod
-    def get_main_llm_prompt(cls, mode: str, llm: BaseLanguageModel, pre_prompt: str, query: str, inputs: dict, chain_output: Optional[str],
+    def get_main_llm_prompt(cls, mode: str, llm: BaseLanguageModel, model: dict,
+                            pre_prompt: str, query: str, inputs: dict,
+                            agent_execute_result: Optional[AgentExecuteResult],
                             memory: Optional[ReadOnlyConversationTokenDBBufferSharedMemory]) -> \
-            Union[str | List[BaseMessage]]:
-        pre_prompt = PromptBuilder.process_template(pre_prompt) if pre_prompt else pre_prompt
+            Tuple[Union[str | List[BaseMessage]], Optional[List[str]]]:
         if mode == 'completion':
-            prompt_template = OutLinePromptTemplate.from_template(
-                template=("Use the following pieces of [CONTEXT] to answer the question at the end. "
-                          "If you don't know the answer, "
-                          "just say that you don't know, don't try to make up an answer. \n"
-                          "```\n"
-                          "[CONTEXT]\n"
-                          "{context}\n"
-                          "```\n" if chain_output else "")
+            prompt_template = JinjaPromptTemplate.from_template(
+                template=("""Use the following context as your learned knowledge, inside <context></context> XML tags.
+
+<context>
+{{context}}
+</context>
+
+When answer to user:
+- If you don't know, just say that you don't know.
+- If you don't know when you are not sure, ask for clarification. 
+Avoid mentioning that you obtained the information from the context.
+And answer according to the language of the user's question.
+""" if agent_execute_result else "")
                          + (pre_prompt + "\n" if pre_prompt else "")
-                         + "{query}\n"
+                         + "{{query}}\n"
             )
 
-            if chain_output:
-                inputs['context'] = chain_output
+            if agent_execute_result:
+                inputs['context'] = agent_execute_result.output
 
             prompt_inputs = {k: inputs[k] for k in prompt_template.input_variables if k in inputs}
             prompt_content = prompt_template.format(
@@ -147,76 +202,93 @@ class Completion:
 
             if isinstance(llm, BaseChatModel):
                 # use chat llm as completion model
-                return [HumanMessage(content=prompt_content)]
+                return [HumanMessage(content=prompt_content)], None
             else:
-                return prompt_content
+                return prompt_content, None
         else:
             messages: List[BaseMessage] = []
-
-            system_message = None
-            if pre_prompt:
-                # append pre prompt as system message
-                system_message = PromptBuilder.to_system_message(pre_prompt, inputs)
-
-            if chain_output:
-                # append context as system message, currently only use simple stuff prompt
-                context_message = PromptBuilder.to_system_message(
-                    """Use the following pieces of [CONTEXT] to answer the users question. 
-If you don't know the answer, just say that you don't know, don't try to make up an answer.
-```
-[CONTEXT]
-{context}
-```""",
-                    {'context': chain_output}
-                )
-
-                if not system_message:
-                    system_message = context_message
-                else:
-                    system_message.content = context_message.content + "\n\n" + system_message.content
-
-            if system_message:
-                messages.append(system_message)
 
             human_inputs = {
                 "query": query
             }
 
-            # construct main prompt
-            human_message = PromptBuilder.to_human_message(
-                prompt_content="{query}",
-                inputs=human_inputs
-            )
+            human_message_prompt = ""
+
+            if pre_prompt:
+                pre_prompt_inputs = {k: inputs[k] for k in
+                                     JinjaPromptTemplate.from_template(template=pre_prompt).input_variables
+                                     if k in inputs}
+
+                if pre_prompt_inputs:
+                    human_inputs.update(pre_prompt_inputs)
+
+            if agent_execute_result:
+                human_inputs['context'] = agent_execute_result.output
+                human_message_prompt += """Use the following context as your learned knowledge, inside <context></context> XML tags.
+
+<context>
+{{context}}
+</context>
+
+When answer to user:
+- If you don't know, just say that you don't know.
+- If you don't know when you are not sure, ask for clarification. 
+Avoid mentioning that you obtained the information from the context.
+And answer according to the language of the user's question.
+"""
+
+            if pre_prompt:
+                human_message_prompt += pre_prompt
+
+            query_prompt = "\n\nHuman: {{query}}\n\nAssistant: "
 
             if memory:
                 # append chat histories
-                tmp_messages = messages.copy() + [human_message]
-                curr_message_tokens = memory.llm.get_messages_tokens(tmp_messages)
-                rest_tokens = llm_constant.max_context_token_length[
-                                  memory.llm.model_name] - memory.llm.max_tokens - curr_message_tokens
+                tmp_human_message = PromptBuilder.to_human_message(
+                    prompt_content=human_message_prompt + query_prompt,
+                    inputs=human_inputs
+                )
+
+                curr_message_tokens = memory.llm.get_num_tokens_from_messages([tmp_human_message])
+                model_name = model['name']
+                max_tokens = model.get("completion_params").get('max_tokens')
+                rest_tokens = llm_constant.max_context_token_length[model_name] \
+                              - max_tokens - curr_message_tokens
                 rest_tokens = max(rest_tokens, 0)
-                history_messages = cls.get_history_messages_from_memory(memory, rest_tokens)
-                messages += history_messages
+                histories = cls.get_history_messages_from_memory(memory, rest_tokens)
+                human_message_prompt += "\n\n" if human_message_prompt else ""
+                human_message_prompt += "Here is the chat histories between human and assistant, " \
+                                        "inside <histories></histories> XML tags.\n\n<histories>\n"
+                human_message_prompt += histories + "\n</histories>"
+
+            human_message_prompt += query_prompt
+
+            # construct main prompt
+            human_message = PromptBuilder.to_human_message(
+                prompt_content=human_message_prompt,
+                inputs=human_inputs
+            )
 
             messages.append(human_message)
 
-            return messages
+            for message in messages:
+                message.content = re.sub(r'<\|.*?\|>', '', message.content)
+
+            return messages, ['\nHuman:', '</histories>']
 
     @classmethod
-    def get_llm_callback_manager(cls, llm: Union[StreamableOpenAI, StreamableChatOpenAI],
-                                 streaming: bool, conversation_message_task: ConversationMessageTask) -> CallbackManager:
+    def get_llm_callbacks(cls, llm: BaseLanguageModel,
+                          streaming: bool,
+                          conversation_message_task: ConversationMessageTask) -> List[BaseCallbackHandler]:
         llm_callback_handler = LLMCallbackHandler(llm, conversation_message_task)
         if streaming:
-            callback_handlers = [llm_callback_handler, QiyeGPTStreamingStdOutCallbackHandler()]
+            return [llm_callback_handler, QiyeGPTStreamingStdOutCallbackHandler()]
         else:
-            callback_handlers = [llm_callback_handler, QiyeGPTStdOutCallbackHandler()]
-
-        return CallbackManager(callback_handlers)
+            return [llm_callback_handler, QiyeGPTStdOutCallbackHandler()]
 
     @classmethod
     def get_history_messages_from_memory(cls, memory: ReadOnlyConversationTokenDBBufferSharedMemory,
-                                         max_token_limit: int) -> \
-            List[BaseMessage]:
+                                         max_token_limit: int) -> str:
         """Get memory messages."""
         memory.max_token_limit = max_token_limit
         memory_key = memory.memory_variables[0]
@@ -248,29 +320,51 @@ If you don't know the answer, just say that you don't know, don't try to make up
         return memory
 
     @classmethod
-    def validate_query_tokens(cls, tenant_id: str, app_model_config: AppModelConfig, query: str):
+    def get_validate_rest_tokens(cls, mode: str, tenant_id: str, app_model_config: AppModelConfig,
+                                 query: str, inputs: dict) -> int:
         llm = LLMBuilder.to_llm_from_model(
             tenant_id=tenant_id,
             model=app_model_config.model_dict
         )
 
-        model_limited_tokens = llm_constant.max_context_token_length[llm.model_name]
-        max_tokens = llm.max_tokens
+        model_name = app_model_config.model_dict.get("name")
+        model_limited_tokens = llm_constant.max_context_token_length[model_name]
+        max_tokens = app_model_config.model_dict.get("completion_params").get('max_tokens')
 
-        if model_limited_tokens - max_tokens - llm.get_num_tokens(query) < 0:
-            raise LLMBadRequestError("Query is too long")
+        # get prompt without memory and context
+        prompt, _ = cls.get_main_llm_prompt(
+            mode=mode,
+            llm=llm,
+            model=app_model_config.model_dict,
+            pre_prompt=app_model_config.pre_prompt,
+            query=query,
+            inputs=inputs,
+            agent_execute_result=None,
+            memory=None
+        )
+
+        prompt_tokens = llm.get_num_tokens(prompt) if isinstance(prompt, str) \
+            else llm.get_num_tokens_from_messages(prompt)
+
+        rest_tokens = model_limited_tokens - max_tokens - prompt_tokens
+        if rest_tokens < 0:
+            raise LLMBadRequestError("Query or prefix prompt is too long, you can reduce the prefix prompt, "
+                                     "or shrink the max token, or switch to a llm with a larger token limit size.")
+
+        return rest_tokens
 
     @classmethod
-    def recale_llm_max_tokens(cls, final_llm: Union[StreamableOpenAI, StreamableChatOpenAI],
+    def recale_llm_max_tokens(cls, final_llm: BaseLanguageModel, model: dict,
                               prompt: Union[str, List[BaseMessage]], mode: str):
         # recalc max_tokens if sum(prompt_token +  max_tokens) over model token limit
-        model_limited_tokens = llm_constant.max_context_token_length[final_llm.model_name]
-        max_tokens = final_llm.max_tokens
+        model_name = model.get("name")
+        model_limited_tokens = llm_constant.max_context_token_length[model_name]
+        max_tokens = model.get("completion_params").get('max_tokens')
 
         if mode == 'completion' and isinstance(final_llm, BaseLLM):
             prompt_tokens = final_llm.get_num_tokens(prompt)
         else:
-            prompt_tokens = final_llm.get_messages_tokens(prompt)
+            prompt_tokens = final_llm.get_num_tokens_from_messages(prompt)
 
         if prompt_tokens + max_tokens > model_limited_tokens:
             max_tokens = max(model_limited_tokens - prompt_tokens, 16)
@@ -279,20 +373,22 @@ If you don't know the answer, just say that you don't know, don't try to make up
     @classmethod
     def generate_more_like_this(cls, task_id: str, app: App, message: Message, pre_prompt: str,
                                 app_model_config: AppModelConfig, user: Account, streaming: bool):
-        llm: StreamableOpenAI = LLMBuilder.to_llm(
+
+        llm = LLMBuilder.to_llm_from_model(
             tenant_id=app.tenant_id,
-            model_name='gpt-3.5-turbo',
+            model=app_model_config.model_dict,
             streaming=streaming
         )
 
         # get llm prompt
-        original_prompt = cls.get_main_llm_prompt(
+        original_prompt, _ = cls.get_main_llm_prompt(
             mode="completion",
             llm=llm,
+            model=app_model_config.model_dict,
             pre_prompt=pre_prompt,
             query=message.query,
             inputs=message.inputs,
-            chain_output=None,
+            agent_execute_result=None,
             memory=None
         )
 
@@ -315,10 +411,11 @@ If you don't know the answer, just say that you don't know, don't try to make up
             streaming=streaming
         )
 
-        llm.callback_manager = cls.get_llm_callback_manager(llm, streaming, conversation_message_task)
+        llm.callbacks = cls.get_llm_callbacks(llm, streaming, conversation_message_task)
 
         cls.recale_llm_max_tokens(
             final_llm=llm,
+            model=app_model_config.model_dict,
             prompt=prompt,
             mode='completion'
         )

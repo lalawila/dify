@@ -3,6 +3,7 @@ import re
 import subprocess
 import uuid
 from datetime import datetime
+from hashlib import sha256
 from zoneinfo import available_timezones
 import random
 import string
@@ -21,7 +22,7 @@ class TimestampField(fields.Raw):
 
 def email(email):
     # Define a regex pattern for email addresses
-    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    pattern = r"^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$"
     # Check if the email matches the pattern
     if re.match(pattern, email) is not None:
         return email
@@ -147,3 +148,14 @@ def get_remote_ip(request):
         return request.headers.getlist("X-Forwarded-For")[0]
     else:
         return request.remote_addr
+
+
+def generate_text_hash(text: str) -> str:
+    hash_text = str(text) + 'None'
+    return sha256(hash_text.encode()).hexdigest()
+
+
+def get_current_datetime(type: str) -> str:
+    # get current time
+    current_time = datetime.utcnow()
+    return current_time.strftime("%Y-%m-%d %H:%M:%S UTC+0000 %A")

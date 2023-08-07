@@ -8,7 +8,7 @@
    
    ```bash
    cd ../docker
-   docker-compose -f docker-compose.middleware.yaml up -d
+   docker-compose -f docker-compose.middleware.yaml -p dify up -d
    cd ../api
    ```
 2. Copy `.env.example` to `.env`
@@ -16,6 +16,11 @@
 
    ```bash
    openssl rand -base64 42
+   ```
+3.5 If you use annaconda, create a new environment and activate it
+   ```bash
+   conda create --name dify python=3.10
+   conda activate dify
    ```
 4. Install dependencies
    ```bash
@@ -33,3 +38,4 @@
    flask run --host 0.0.0.0 --port=5001 --debug
    ```
 7. Setup your application by visiting http://localhost:5001/console/api/setup or other apis...
+8. If you need to debug local async processing, you can run `celery -A app.celery worker -Q dataset,generation,mail`, celery can do dataset importing and other async tasks.

@@ -1,9 +1,9 @@
+import json
 import logging
 
 from typing import Any, Dict, List, Union, Optional
 
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.schema import AgentAction, AgentFinish, LLMResult
 
 from core.callback_handler.entity.dataset_query import DatasetQueryObj
 from core.conversation_message_task import ConversationMessageTask
@@ -11,6 +11,7 @@ from core.conversation_message_task import ConversationMessageTask
 
 class DatasetToolCallbackHandler(BaseCallbackHandler):
     """Callback Handler that prints to std out."""
+    raise_error: bool = True
 
     def __init__(self, conversation_message_task: ConversationMessageTask) -> None:
         """Initialize callback handler."""
@@ -43,9 +44,11 @@ class DatasetToolCallbackHandler(BaseCallbackHandler):
         input_str: str,
         **kwargs: Any,
     ) -> None:
-        tool_name = serialized.get('name')
-        dataset_id = tool_name[len("dataset-"):]
-        self.conversation_message_task.on_dataset_query_end(DatasetQueryObj(dataset_id=dataset_id, query=input_str))
+        # tool_name = serialized.get('name')
+        input_dict = json.loads(input_str.replace("'", "\""))
+        dataset_id = input_dict.get('dataset_id')
+        query = input_dict.get('query')
+        self.conversation_message_task.on_dataset_query_end(DatasetQueryObj(dataset_id=dataset_id, query=query))
 
     def on_tool_end(
         self,
@@ -66,52 +69,3 @@ class DatasetToolCallbackHandler(BaseCallbackHandler):
     ) -> None:
         """Do nothing."""
         logging.error(error)
-
-    def on_chain_start(
-        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
-    ) -> None:
-        pass
-
-    def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> None:
-        pass
-
-    def on_chain_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
-        pass
-
-    def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
-    ) -> None:
-        pass
-
-    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
-        pass
-
-    def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        """Do nothing."""
-        pass
-
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
-        logging.error(error)
-
-    def on_agent_action(
-        self, action: AgentAction, color: Optional[str] = None, **kwargs: Any
-    ) -> Any:
-        pass
-
-    def on_text(
-        self,
-        text: str,
-        color: Optional[str] = None,
-        end: str = "",
-        **kwargs: Optional[str],
-    ) -> None:
-        """Run on additional input from chains and agents."""
-        pass
-
-    def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
-        """Run on agent end."""
-        pass

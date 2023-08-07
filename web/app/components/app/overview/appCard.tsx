@@ -1,4 +1,5 @@
 'use client'
+import type { FC } from 'react'
 import React, { useState } from 'react'
 import {
   Cog8ToothIcon,
@@ -11,6 +12,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import SettingsModal from './settings'
 import ShareLink from './share-link'
+import EmbeddedModal from './embedded'
 import CustomizeModal from './customize'
 import Tooltip from '@/app/components/base/tooltip'
 import AppBasic, { randomString } from '@/app/components/app-sidebar/basic'
@@ -18,19 +20,22 @@ import Button from '@/app/components/base/button'
 import Tag from '@/app/components/base/tag'
 import Switch from '@/app/components/base/switch'
 import type { AppDetailResponse } from '@/models/app'
+import './style.css'
+import { AppType } from '@/types/app'
 
 export type IAppCardProps = {
   className?: string
   appInfo: AppDetailResponse
-  cardType?: 'app' | 'api'
+  cardType?: 'app' | 'api' | 'webapp'
   customBgColor?: string
   onChangeStatus: (val: boolean) => Promise<any>
   onSaveSiteConfig?: (params: any) => Promise<any>
   onGenerateCode?: () => Promise<any>
 }
 
-// todo: get image url from appInfo
-const defaultUrl = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+const EmbedIcon: FC<{ className?: string }> = ({ className = '' }) => {
+  return <div className={`codeBrowserIcon ${className}`}></div>
+}
 
 function AppCard({
   appInfo,
@@ -45,19 +50,22 @@ function AppCard({
   const pathname = usePathname()
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showEmbedded, setShowEmbedded] = useState(false)
   const [showCustomizeModal, setShowCustomizeModal] = useState(false)
   const { t } = useTranslation()
 
   const OPERATIONS_MAP = {
-    app: [
+    webapp: [
       { opName: t('appOverview.overview.appInfo.preview'), opIcon: RocketLaunchIcon },
       { opName: t('appOverview.overview.appInfo.share.entry'), opIcon: ShareIcon },
+      appInfo.mode === AppType.chat ? { opName: t('appOverview.overview.appInfo.embedded.entry'), opIcon: EmbedIcon } : false,
       { opName: t('appOverview.overview.appInfo.settings.entry'), opIcon: Cog8ToothIcon },
-    ],
+    ].filter(item => !!item),
     api: [{ opName: t('appOverview.overview.apiInfo.doc'), opIcon: DocumentTextIcon }],
+    app: [],
   }
 
-  const isApp = cardType === 'app'
+  const isApp = cardType === 'app' || cardType === 'webapp'
   const basicName = isApp ? appInfo?.site?.title : t('appOverview.overview.apiInfo.title')
   const runningStatus = isApp ? appInfo.enable_site : appInfo.enable_api
   const { app_base_url, access_token } = appInfo.site ?? {}
@@ -82,6 +90,10 @@ function AppCard({
         return () => {
           setShowSettingsModal(true)
         }
+      case t('appOverview.overview.appInfo.embedded.entry'):
+        return () => {
+          setShowEmbedded(true)
+        }
       default:
         // jump to page develop
         return () => {
@@ -103,8 +115,9 @@ function AppCard({
       <div className={`px-6 py-4 ${customBgColor ?? bgColor} rounded-lg`}>
         <div className="mb-2.5 flex flex-row items-start justify-between">
           <AppBasic
-            iconType={isApp ? 'app' : 'api'}
-            iconUrl={defaultUrl}
+            iconType={cardType}
+            icon={appInfo.icon}
+            icon_background={appInfo.icon_background}
             name={basicName}
             type={
               isApp
@@ -131,7 +144,7 @@ function AppCard({
         </div>
         <div
           className={`pt-2 flex flex-row items-center ${!isApp ? 'mb-[calc(2rem_+_1px)]' : ''
-            }`}
+          }`}
         >
           {OPERATIONS_MAP[cardType].map((op) => {
             return (
@@ -140,20 +153,20 @@ function AppCard({
                 key={op.opName}
                 onClick={genClickFuncByName(op.opName)}
                 disabled={
-                  [t('appOverview.overview.appInfo.preview'), t('appOverview.overview.appInfo.share.entry')].includes(op.opName) && !runningStatus
+                  [t('appOverview.overview.appInfo.preview'), t('appOverview.overview.appInfo.share.entry'), t('appOverview.overview.appInfo.embedded.entry')].includes(op.opName) && !runningStatus
                 }
               >
                 <Tooltip
                   content={t('appOverview.overview.appInfo.preUseReminder') ?? ''}
                   selector={`op-btn-${randomString(16)}`}
                   className={
-                    ([t('appOverview.overview.appInfo.preview'), t('appOverview.overview.appInfo.share.entry')].includes(op.opName) && !runningStatus)
+                    ([t('appOverview.overview.appInfo.preview'), t('appOverview.overview.appInfo.share.entry'), t('appOverview.overview.appInfo.embedded.entry')].includes(op.opName) && !runningStatus)
                       ? 'mt-[-8px]'
                       : '!hidden'
                   }
                 >
                   <div className="flex flex-row items-center">
-                    <op.opIcon className="h-4 w-4 mr-1.5" />
+                    <op.opIcon className="h-4 w-4 mr-1.5 stroke-[1.8px]" />
                     <span className="text-xs">{op.opName}</span>
                   </div>
                 </Tooltip>
@@ -193,6 +206,12 @@ function AppCard({
               isShow={showSettingsModal}
               onClose={() => setShowSettingsModal(false)}
               onSave={onSaveSiteConfig}
+            />
+            <EmbeddedModal
+              isShow={showEmbedded}
+              onClose={() => setShowEmbedded(false)}
+              appBaseUrl={app_base_url}
+              accessToken={access_token}
             />
             <CustomizeModal
               isShow={showCustomizeModal}

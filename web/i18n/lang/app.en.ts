@@ -1,4 +1,5 @@
 const translation = {
+  title: 'Apps',
   createApp: 'Create new App',
   modes: {
     completion: 'Text Generator',
@@ -34,6 +35,10 @@ const translation = {
     appTypeRequired: 'Please select an app type',
     appCreated: 'App created',
     appCreateFailed: 'Failed to create app',
+  },
+  emoji: {
+    ok: 'OK',
+    cancel: 'Cancel',
   },
 }
 

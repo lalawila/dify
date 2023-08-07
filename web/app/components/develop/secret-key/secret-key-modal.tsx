@@ -6,6 +6,8 @@ import {
 import { useTranslation } from 'react-i18next'
 import { PlusIcon, XMarkIcon } from '@heroicons/react/20/solid'
 import useSWR, { useSWRConfig } from 'swr'
+import { useContext } from 'use-context-selector'
+import copy from 'copy-to-clipboard'
 import SecretKeyGenerateModal from './secret-key-generate'
 import s from './style.module.css'
 import Modal from '@/app/components/base/modal'
@@ -15,8 +17,6 @@ import type { CreateApiKeyResponse } from '@/models/app'
 import Tooltip from '@/app/components/base/tooltip'
 import Loading from '@/app/components/base/loading'
 import Confirm from '@/app/components/base/confirm'
-import useCopyToClipboard from '@/hooks/use-copy-to-clipboard'
-import { useContext } from 'use-context-selector'
 import I18n from '@/context/i18n'
 
 type ISecretKeyModalProps = {
@@ -39,7 +39,6 @@ const SecretKeyModal = ({
   const { data: apiKeysList } = useSWR(commonParams, fetchApiKeysList)
 
   const [delKeyID, setDelKeyId] = useState('')
-  const [_, copy] = useCopyToClipboard()
 
   const { locale } = useContext(I18n)
 
@@ -58,12 +57,11 @@ const SecretKeyModal = ({
     }
   }, [copyValue])
 
-
   const onDel = async () => {
     setShowConfirmDelete(false)
-    if (!delKeyID) {
+    if (!delKeyID)
       return
-    }
+
     await delApikey({ url: `/apps/${appId}/api-keys/${delKeyID}`, params: {} })
     mutate(commonParams)
   }
@@ -80,11 +78,10 @@ const SecretKeyModal = ({
   }
 
   const formatDate = (timestamp: any) => {
-    if (locale === 'en') {
+    if (locale === 'en')
       return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format((+timestamp) * 1000)
-    } else {
+    else
       return new Intl.DateTimeFormat('fr-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format((+timestamp) * 1000)
-    }
   }
 
   return (
@@ -111,7 +108,7 @@ const SecretKeyModal = ({
                   <div className='flex-shrink-0 px-3 truncate w-28'>{api.last_used_at ? formatDate(api.last_used_at) : t('appApi.never')}</div>
                   <div className='flex flex-grow px-3'>
                     <Tooltip
-                      selector="top-uniq"
+                      selector={`key-${api.token}`}
                       content={copyValue === api.token ? `${t('appApi.copied')}` : `${t('appApi.copy')}`}
                       className='z-10'
                     >

@@ -1,20 +1,21 @@
 'use client'
-import React, { FC, useEffect } from 'react'
+import type { FC } from 'react'
+import React, { useRef, useState } from 'react'
+import { useGetState, useInfiniteScroll } from 'ahooks'
 import cn from 'classnames'
 import { useTranslation } from 'react-i18next'
-import Modal from '@/app/components/base/modal'
-import { DataSet } from '@/models/datasets'
+import Link from 'next/link'
+import produce from 'immer'
 import TypeIcon from '../type-icon'
+import s from './style.module.css'
+import Modal from '@/app/components/base/modal'
+import type { DataSet } from '@/models/datasets'
 import Button from '@/app/components/base/button'
 import { fetchDatasets } from '@/service/datasets'
 import Loading from '@/app/components/base/loading'
 import { formatNumber } from '@/utils/format'
-import Link from 'next/link'
 
-import s from './style.module.css'
-import Toast from '@/app/components/base/toast'
-
-export interface ISelectDataSetProps {
+export type ISelectDataSetProps = {
   isShow: boolean
   onClose: () => void
   selectedIds: string[]
@@ -28,42 +29,64 @@ const SelectDataSet: FC<ISelectDataSetProps> = ({
   onSelect,
 }) => {
   const { t } = useTranslation()
-  const [selected, setSelected] = React.useState<DataSet[]>([])
+  const [selected, setSelected] = React.useState<DataSet[]>(selectedIds.map(id => ({ id }) as any))
   const [loaded, setLoaded] = React.useState(false)
   const [datasets, setDataSets] = React.useState<DataSet[] | null>(null)
   const hasNoData = !datasets || datasets?.length === 0
-  // Only one dataset can be selected. Historical data retains data and supports multiple selections, but when saving, only one can be selected. This is based on considerations of performance and accuracy. 
-  const canSelectMulti = selectedIds.length > 1
-  useEffect(() => {
-    (async () => {
-      const { data } = await fetchDatasets({ url: '/datasets', params: { page: 1 } })
-      setDataSets(data)
-      setLoaded(true)
-      setSelected(data.filter((item) => selectedIds.includes(item.id)))
-    })()
-  }, [])
+  const canSelectMulti = true
+
+  const listRef = useRef<HTMLDivElement>(null)
+  const [page, setPage, getPage] = useGetState(1)
+  const [isNoMore, setIsNoMore] = useState(false)
+
+  useInfiniteScroll(
+    async () => {
+      if (!isNoMore) {
+        const { data, has_more } = await fetchDatasets({ url: '/datasets', params: { page } })
+        setPage(getPage() + 1)
+        setIsNoMore(!has_more)
+        const newList = [...(datasets || []), ...data]
+        setDataSets(newList)
+        setLoaded(true)
+        if (!selected.find(item => !item.name))
+          return { list: [] }
+
+        const newSelected = produce(selected, (draft) => {
+          selected.forEach((item, index) => {
+            if (!item.name) { // not fetched database
+              const newItem = newList.find(i => i.id === item.id)
+              if (newItem)
+                draft[index] = newItem
+            }
+          })
+        })
+        setSelected(newSelected)
+      }
+      return { list: [] }
+    },
+    {
+      target: listRef,
+      isNoMore: () => {
+        return isNoMore
+      },
+      reloadDeps: [isNoMore],
+    },
+  )
+
   const toggleSelect = (dataSet: DataSet) => {
-    const isSelected = selected.some((item) => item.id === dataSet.id)
+    const isSelected = selected.some(item => item.id === dataSet.id)
     if (isSelected) {
-      setSelected(selected.filter((item) => item.id !== dataSet.id))
+      setSelected(selected.filter(item => item.id !== dataSet.id))
     }
     else {
-      if (canSelectMulti) {
+      if (canSelectMulti)
         setSelected([...selected, dataSet])
-      } else {
+      else
         setSelected([dataSet])
-      }
     }
   }
 
   const handleSelect = () => {
-    if (selected.length > 1) {
-      Toast.notify({
-        type: 'error',
-        message: t('appDebug.feature.dataSet.notSupportSelectMulti')
-      })
-      return
-    }
     onSelect(selected)
   }
   return (
@@ -83,7 +106,7 @@ const SelectDataSet: FC<ISelectDataSetProps> = ({
         <div className='flex items-center justify-center mt-6 rounded-lg space-x-1  h-[128px] text-[13px] border'
           style={{
             background: 'rgba(0, 0, 0, 0.02)',
-            borderColor: 'rgba(0, 0, 0, 0.02'
+            borderColor: 'rgba(0, 0, 0, 0.02',
           }}
         >
           <span className='text-gray-500'>{t('appDebug.feature.dataSet.noDataSet')}</span>
@@ -93,8 +116,8 @@ const SelectDataSet: FC<ISelectDataSetProps> = ({
 
       {datasets && datasets?.length > 0 && (
         <>
-          <div className='mt-7 space-y-1 max-h-[286px] overflow-y-auto'>
-            {datasets.map((item) => (
+          <div ref={listRef} className='mt-7 space-y-1 max-h-[286px] overflow-y-auto'>
+            {datasets.map(item => (
               <div
                 key={item.id}
                 className={cn(s.item, selected.some(i => i.id === item.id) && s.selected, 'flex justify-between items-center h-10 px-2 rounded-lg bg-white border border-gray-200  cursor-pointer')}
@@ -105,8 +128,12 @@ const SelectDataSet: FC<ISelectDataSetProps> = ({
                   <div className='max-w-[200px] text-[13px] font-medium text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap'>{item.name}</div>
                 </div>
 
-                <div className='max-w-[140px] flex text-xs text-gray-500  overflow-hidden text-ellipsis whitespace-nowrap'>
-                  {formatNumber(item.word_count)} {t('appDebug.feature.dataSet.words')} · {formatNumber(item.document_count)} {t('appDebug.feature.dataSet.textBlocks')}
+                <div className='flex text-xs text-gray-500 overflow-hidden whitespace-nowrap'>
+                  <span className='max-w-[100px] overflow-hidden text-ellipsis whitespace-nowrap'>{formatNumber(item.word_count)}</span>
+                  {t('appDebug.feature.dataSet.words')}
+                  <span className='px-0.5'>·</span>
+                  <span className='max-w-[100px] min-w-[8px] overflow-hidden text-ellipsis whitespace-nowrap'>{formatNumber(item.document_count)} </span>
+                  {t('appDebug.feature.dataSet.textBlocks')}
                 </div>
               </div>
             ))}

@@ -1,12 +1,17 @@
-from typing import Union, Optional
+from typing import Union, Optional, List
 
-from langchain.callbacks import CallbackManager
-from langchain.llms.fake import FakeListLLM
+from langchain.callbacks.base import BaseCallbackHandler
 
 from core.constant import llm_constant
+from core.llm.error import ProviderTokenNotInitError
+from core.llm.provider.base import BaseProvider
 from core.llm.provider.llm_provider_service import LLMProviderService
+from core.llm.streamable_azure_chat_open_ai import StreamableAzureChatOpenAI
+from core.llm.streamable_azure_open_ai import StreamableAzureOpenAI
+from core.llm.streamable_chat_anthropic import StreamableChatAnthropic
 from core.llm.streamable_chat_open_ai import StreamableChatOpenAI
 from core.llm.streamable_open_ai import StreamableOpenAI
+from models.provider import ProviderType, ProviderName
 
 
 class LLMBuilder:
@@ -27,37 +32,48 @@ class LLMBuilder:
     """
 
     @classmethod
-    def to_llm(cls, tenant_id: str, model_name: str, **kwargs) -> Union[StreamableOpenAI, StreamableChatOpenAI, FakeListLLM]:
-        if model_name == 'fake':
-            return FakeListLLM(responses=[])
+    def to_llm(cls, tenant_id: str, model_name: str, **kwargs) -> Union[StreamableOpenAI, StreamableChatOpenAI]:
+        provider = cls.get_default_provider(tenant_id, model_name)
 
+        model_credentials = cls.get_model_credentials(tenant_id, provider, model_name)
+
+        llm_cls = None
         mode = cls.get_mode_by_model(model_name)
         if mode == 'chat':
-            # llm_cls = StreamableAzureChatOpenAI
-            llm_cls = StreamableChatOpenAI
+            if provider == ProviderName.OPENAI.value:
+                llm_cls = StreamableChatOpenAI
+            elif provider == ProviderName.AZURE_OPENAI.value:
+                llm_cls = StreamableAzureChatOpenAI
+            elif provider == ProviderName.ANTHROPIC.value:
+                llm_cls = StreamableChatAnthropic
         elif mode == 'completion':
-            llm_cls = StreamableOpenAI
-        else:
+            if provider == ProviderName.OPENAI.value:
+                llm_cls = StreamableOpenAI
+            elif provider == ProviderName.AZURE_OPENAI.value:
+                llm_cls = StreamableAzureOpenAI
+
+        if not llm_cls:
             raise ValueError(f"model name {model_name} is not supported.")
 
-        model_credentials = cls.get_model_credentials(tenant_id, model_name)
+        model_kwargs = {
+            'model_name': model_name,
+            'temperature': kwargs.get('temperature', 0),
+            'max_tokens': kwargs.get('max_tokens', 256),
+            'top_p': kwargs.get('top_p', 1),
+            'frequency_penalty': kwargs.get('frequency_penalty', 0),
+            'presence_penalty': kwargs.get('presence_penalty', 0),
+            'callbacks': kwargs.get('callbacks', None),
+            'streaming': kwargs.get('streaming', False),
+        }
 
-        return llm_cls(
-            model_name=model_name,
-            temperature=kwargs.get('temperature', 0),
-            max_tokens=kwargs.get('max_tokens', 256),
-            top_p=kwargs.get('top_p', 1),
-            frequency_penalty=kwargs.get('frequency_penalty', 0),
-            presence_penalty=kwargs.get('presence_penalty', 0),
-            callback_manager=kwargs.get('callback_manager', None),
-            streaming=kwargs.get('streaming', False),
-            # request_timeout=None
-            **model_credentials
-        )
+        model_kwargs.update(model_credentials)
+        model_kwargs = llm_cls.get_kwargs_from_model_params(model_kwargs)
+
+        return llm_cls(**model_kwargs)
 
     @classmethod
     def to_llm_from_model(cls, tenant_id: str, model: dict, streaming: bool = False,
-                          callback_manager: Optional[CallbackManager] = None) -> Union[StreamableOpenAI, StreamableChatOpenAI]:
+                          callbacks: Optional[List[BaseCallbackHandler]] = None) -> Union[StreamableOpenAI, StreamableChatOpenAI]:
         model_name = model.get("name")
         completion_params = model.get("completion_params", {})
 
@@ -70,7 +86,7 @@ class LLMBuilder:
             frequency_penalty=completion_params.get('frequency_penalty', 0.1),
             presence_penalty=completion_params.get('presence_penalty', 0.1),
             streaming=streaming,
-            callback_manager=callback_manager
+            callbacks=callbacks
         )
 
     @classmethod
@@ -86,18 +102,47 @@ class LLMBuilder:
             raise ValueError(f"model name {model_name} is not supported.")
 
     @classmethod
-    def get_model_credentials(cls, tenant_id: str, model_name: str) -> dict:
+    def get_model_credentials(cls, tenant_id: str, model_provider: str, model_name: str) -> dict:
         """
         Returns the API credentials for the given tenant_id and model_name, based on the model's provider.
         Raises an exception if the model_name is not found or if the provider is not found.
         """
         if not model_name:
             raise Exception('model name not found')
+        #
+        # if model_name not in llm_constant.models:
+        #     raise Exception('model {} not found'.format(model_name))
 
-        if model_name not in llm_constant.models:
-            raise Exception('model {} not found'.format(model_name))
-
-        model_provider = llm_constant.models[model_name]
+        # model_provider = llm_constant.models[model_name]
 
         provider_service = LLMProviderService(tenant_id=tenant_id, provider_name=model_provider)
         return provider_service.get_credentials(model_name)
+
+    @classmethod
+    def get_default_provider(cls, tenant_id: str, model_name: str) -> str:
+        provider_name = llm_constant.models[model_name]
+
+        if provider_name == 'openai':
+            # get the default provider (openai / azure_openai) for the tenant
+            openai_provider = BaseProvider.get_valid_provider(tenant_id, ProviderName.OPENAI.value)
+            azure_openai_provider = BaseProvider.get_valid_provider(tenant_id, ProviderName.AZURE_OPENAI.value)
+
+            provider = None
+            if openai_provider and openai_provider.provider_type == ProviderType.CUSTOM.value:
+                provider = openai_provider
+            elif azure_openai_provider and azure_openai_provider.provider_type == ProviderType.CUSTOM.value:
+                provider = azure_openai_provider
+            elif openai_provider and openai_provider.provider_type == ProviderType.SYSTEM.value:
+                provider = openai_provider
+            elif azure_openai_provider and azure_openai_provider.provider_type == ProviderType.SYSTEM.value:
+                provider = azure_openai_provider
+
+            if not provider:
+                raise ProviderTokenNotInitError(
+                    f"No valid {provider_name} model provider credentials found. "
+                    f"Please go to Settings -> Model Provider to complete your provider credentials."
+                )
+
+            provider_name = provider.provider_name
+
+        return provider_name

@@ -1,62 +1,80 @@
 import json
+import logging
 from typing import Optional, Union
 
+import openai
 import requests
 
 from core.llm.provider.base import BaseProvider
+from core.llm.provider.errors import ValidateFailedError
 from models.provider import ProviderName
 
 
+AZURE_OPENAI_API_VERSION = '2023-07-01-preview'
+
+
 class AzureProvider(BaseProvider):
-    def get_models(self, model_id: Optional[str] = None) -> list[dict]:
-        credentials = self.get_credentials(model_id)
-        url = "{}/openai/deployments?api-version={}".format(
-            credentials.get('openai_api_base'),
-            credentials.get('openai_api_version')
-        )
+    def get_models(self, model_id: Optional[str] = None, credentials: Optional[dict] = None) -> list[dict]:
+        return []
 
-        headers = {
-            "api-key": credentials.get('openai_api_key'),
-            "content-type": "application/json; charset=utf-8"
-        }
+    def check_embedding_model(self, credentials: Optional[dict] = None):
+        credentials = self.get_credentials('text-embedding-ada-002') if not credentials else credentials
+        try:
+            result = openai.Embedding.create(input=['test'],
+                                             engine='text-embedding-ada-002',
+                                             timeout=60,
+                                             api_key=str(credentials.get('openai_api_key')),
+                                             api_base=str(credentials.get('openai_api_base')),
+                                             api_type='azure',
+                                             api_version=str(credentials.get('openai_api_version')))["data"][0][
+                "embedding"]
+        except openai.error.AuthenticationError as e:
+            raise AzureAuthenticationError(str(e))
+        except openai.error.APIConnectionError as e:
+            raise AzureRequestFailedError(
+                'Failed to request Azure OpenAI, please check your API Base Endpoint, The format is `https://xxx.openai.azure.com/`')
+        except openai.error.InvalidRequestError as e:
+            if e.http_status == 404:
+                raise AzureRequestFailedError("Please check your 'gpt-3.5-turbo' or 'text-embedding-ada-002' "
+                                              "deployment name is exists in Azure AI")
+            else:
+                raise AzureRequestFailedError(
+                    'Failed to request Azure OpenAI. cause: {}'.format(str(e)))
+        except openai.error.OpenAIError as e:
+            raise AzureRequestFailedError(
+                'Failed to request Azure OpenAI. cause: {}'.format(str(e)))
 
-        response = requests.get(url, headers=headers)
-
-        if response.status_code == 200:
-            result = response.json()
-            return [{
-                'id': deployment['id'],
-                'name': '{} ({})'.format(deployment['id'], deployment['model'])
-            } for deployment in result['data'] if deployment['status'] == 'succeeded']
-        else:
-            # TODO: optimize in future
-            raise Exception('Failed to get deployments from Azure OpenAI. Status code: {}'.format(response.status_code))
+        if not isinstance(result, list):
+            raise AzureRequestFailedError('Failed to request Azure OpenAI.')
 
     def get_credentials(self, model_id: Optional[str] = None) -> dict:
         """
         Returns the API credentials for Azure OpenAI as a dictionary.
         """
-        encrypted_config = self.get_provider_api_key(model_id=model_id)
-        config = json.loads(encrypted_config)
+        config = self.get_provider_api_key(model_id=model_id)
         config['openai_api_type'] = 'azure'
-        config['deployment_name'] = model_id
+        config['openai_api_version'] = AZURE_OPENAI_API_VERSION
+        if model_id == 'text-embedding-ada-002':
+            config['deployment'] = model_id.replace('.', '') if model_id else None
+            config['chunk_size'] = 16
+        else:
+            config['deployment_name'] = model_id.replace('.', '') if model_id else None
         return config
 
     def get_provider_name(self):
         return ProviderName.AZURE_OPENAI
 
-    def get_provider_configs(self, obfuscated: bool = False) -> Union[str | dict]:
+    def get_provider_configs(self, obfuscated: bool = False, only_custom: bool = False) -> Union[str | dict]:
         """
         Returns the provider configs.
         """
         try:
-            config = self.get_provider_api_key()
-            config = json.loads(config)
+            config = self.get_provider_api_key(only_custom=only_custom)
         except:
             config = {
                 'openai_api_type': 'azure',
-                'openai_api_version': '2023-03-15-preview',
-                'openai_api_base': 'https://foo.microsoft.com/bar',
+                'openai_api_version': AZURE_OPENAI_API_VERSION,
+                'openai_api_base': '',
                 'openai_api_key': ''
             }
 
@@ -64,8 +82,8 @@ class AzureProvider(BaseProvider):
             if not config.get('openai_api_key'):
                 config = {
                     'openai_api_type': 'azure',
-                    'openai_api_version': '2023-03-15-preview',
-                    'openai_api_base': 'https://foo.microsoft.com/bar',
+                    'openai_api_version': AZURE_OPENAI_API_VERSION,
+                    'openai_api_base': '',
                     'openai_api_key': ''
                 }
 
@@ -75,15 +93,29 @@ class AzureProvider(BaseProvider):
         return config
 
     def get_token_type(self):
-        # TODO: change to dict when implemented
-        return lambda value: value
+        return dict
 
     def config_validate(self, config: Union[dict | str]):
         """
         Validates the given config.
         """
-        # TODO: implement
-        pass
+        try:
+            if not isinstance(config, dict):
+                raise ValueError('Config must be a object.')
+
+            if 'openai_api_version' not in config:
+                config['openai_api_version'] = AZURE_OPENAI_API_VERSION
+
+            self.check_embedding_model(credentials=config)
+        except ValidateFailedError as e:
+            raise e
+        except AzureAuthenticationError:
+            raise ValidateFailedError('Validation failed, please check your API Key.')
+        except AzureRequestFailedError as ex:
+            raise ValidateFailedError('Validation failed, error: {}.'.format(str(ex)))
+        except Exception as ex:
+            logging.exception('Azure OpenAI Credentials validation failed')
+            raise ValidateFailedError('Validation failed, error: {}.'.format(str(ex)))
 
     def get_encrypted_token(self, config: Union[dict | str]):
         """
@@ -91,7 +123,7 @@ class AzureProvider(BaseProvider):
         """
         return json.dumps({
             'openai_api_type': 'azure',
-            'openai_api_version': '2023-03-15-preview',
+            'openai_api_version': AZURE_OPENAI_API_VERSION,
             'openai_api_base': config['openai_api_base'],
             'openai_api_key': self.encrypt_token(config['openai_api_key'])
         })
@@ -103,3 +135,11 @@ class AzureProvider(BaseProvider):
         config = json.loads(token)
         config['openai_api_key'] = self.decrypt_token(config['openai_api_key'])
         return config
+
+
+class AzureAuthenticationError(Exception):
+    pass
+
+
+class AzureRequestFailedError(Exception):
+    pass

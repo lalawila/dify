@@ -9,25 +9,22 @@ from werkzeug.exceptions import Unauthorized, Forbidden
 
 from constants.model_template import model_templates, demo_model_templates
 from controllers.console import api
-from controllers.console.app.error import AppNotFoundError, ProviderNotInitializeError, ProviderQuotaExceededError, \
-    CompletionRequestError, ProviderModelCurrentlyNotSupportError
+from controllers.console.app.error import AppNotFoundError
 from controllers.console.setup import setup_required
 from controllers.console.wraps import account_initialization_required
-from core.generator.llm_generator import LLMGenerator
-from core.llm.error import ProviderTokenNotInitError, QuotaExceededError, LLMBadRequestError, LLMAPIConnectionError, \
-    LLMAPIUnavailableError, LLMRateLimitError, LLMAuthorizationError, ModelCurrentlyNotSupportError
 from events.app_event import app_was_created, app_was_deleted
 from libs.helper import TimestampField
 from extensions.ext_database import db
-from models.model import App, AppModelConfig, Site, InstalledApp
-from services.account_service import TenantService
+from models.model import App, AppModelConfig, Site
 from services.app_model_config_service import AppModelConfigService
 
 model_config_fields = {
     'opening_statement': fields.String,
     'suggested_questions': fields.Raw(attribute='suggested_questions_list'),
     'suggested_questions_after_answer': fields.Raw(attribute='suggested_questions_after_answer_dict'),
+    'speech_to_text': fields.Raw(attribute='speech_to_text_dict'),
     'more_like_this': fields.Raw(attribute='more_like_this_dict'),
+    'sensitive_word_avoidance': fields.Raw(attribute='sensitive_word_avoidance_dict'),
     'model': fields.Raw(attribute='model_dict'),
     'user_input_form': fields.Raw(attribute='user_input_form_list'),
     'pre_prompt': fields.String,
@@ -100,7 +97,8 @@ class AppListApi(Resource):
         args = parser.parse_args()
 
         app_models = db.paginate(
-            db.select(App).where(App.tenant_id == current_user.current_tenant_id).order_by(App.created_at.desc()),
+            db.select(App).where(App.tenant_id == current_user.current_tenant_id,
+                                 App.is_universal == False).order_by(App.created_at.desc()),
             page=args['page'],
             per_page=args['limit'],
             error_out=False)
@@ -149,7 +147,9 @@ class AppListApi(Resource):
                 opening_statement=model_configuration['opening_statement'],
                 suggested_questions=json.dumps(model_configuration['suggested_questions']),
                 suggested_questions_after_answer=json.dumps(model_configuration['suggested_questions_after_answer']),
+                speech_to_text=json.dumps(model_configuration['speech_to_text']),
                 more_like_this=json.dumps(model_configuration['more_like_this']),
+                sensitive_word_avoidance=json.dumps(model_configuration['sensitive_word_avoidance']),
                 model=json.dumps(model_configuration['model']),
                 user_input_form=json.dumps(model_configuration['user_input_form']),
                 pre_prompt=model_configuration['pre_prompt'],
@@ -220,7 +220,11 @@ class AppTemplateApi(Resource):
         account = current_user
         interface_language = account.interface_language
 
-        return {'data': demo_model_templates.get(interface_language)}
+        templates = demo_model_templates.get(interface_language)
+        if not templates:
+            templates = demo_model_templates.get('en-US')
+
+        return {'data': templates}
 
 
 class AppApi(Resource):
@@ -293,18 +297,12 @@ class AppNameApi(Resource):
     @account_initialization_required
     @marshal_with(app_detail_fields)
     def post(self, app_id):
-
-        # The role of the current user in the ta table must be admin or owner
-        if current_user.current_tenant.current_role not in ['admin', 'owner']:
-            raise Forbidden()
+        app_id = str(app_id)
+        app = _get_app(app_id, current_user.current_tenant_id)
 
         parser = reqparse.RequestParser()
         parser.add_argument('name', type=str, required=True, location='json')
         args = parser.parse_args()
-
-        app = db.get_or_404(App, str(app_id))
-        if app.tenant_id != flask.session.get('tenant_id'):
-            raise Unauthorized()
 
         app.name = args.get('name')
         app.updated_at = datetime.utcnow()
@@ -318,19 +316,13 @@ class AppIconApi(Resource):
     @account_initialization_required
     @marshal_with(app_detail_fields)
     def post(self, app_id):
-
-        # The role of the current user in the ta table must be admin or owner
-        if current_user.current_tenant.current_role not in ['admin', 'owner']:
-            raise Forbidden()
+        app_id = str(app_id)
+        app = _get_app(app_id, current_user.current_tenant_id)
 
         parser = reqparse.RequestParser()
         parser.add_argument('icon', type=str, location='json')
         parser.add_argument('icon_background', type=str, location='json')
         args = parser.parse_args()
-
-        app = db.get_or_404(App, str(app_id))
-        if app.tenant_id != flask.session.get('tenant_id'):
-            raise Unauthorized()
 
         app.icon = args.get('icon')
         app.icon_background = args.get('icon_background')
@@ -435,7 +427,9 @@ class AppCopy(Resource):
             opening_statement=app_config.opening_statement,
             suggested_questions=app_config.suggested_questions,
             suggested_questions_after_answer=app_config.suggested_questions_after_answer,
+            speech_to_text=app_config.speech_to_text,
             more_like_this=app_config.more_like_this,
+            sensitive_word_avoidance=app_config.sensitive_word_avoidance,
             model=app_config.model,
             user_input_form=app_config.user_input_form,
             pre_prompt=app_config.pre_prompt,
@@ -478,41 +472,12 @@ class AppExport(Resource):
         pass
 
 
-class IntroductionGenerateApi(Resource):
-    @setup_required
-    @login_required
-    @account_initialization_required
-    def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('prompt_template', type=str, required=True, location='json')
-        args = parser.parse_args()
-
-        account = current_user
-
-        try:
-            answer = LLMGenerator.generate_introduction(
-                account.current_tenant_id,
-                args['prompt_template']
-            )
-        except ProviderTokenNotInitError:
-            raise ProviderNotInitializeError()
-        except QuotaExceededError:
-            raise ProviderQuotaExceededError()
-        except ModelCurrentlyNotSupportError:
-            raise ProviderModelCurrentlyNotSupportError()
-        except (LLMBadRequestError, LLMAPIConnectionError, LLMAPIUnavailableError,
-                LLMRateLimitError, LLMAuthorizationError) as e:
-            raise CompletionRequestError(str(e))
-
-        return {'introduction': answer}
-
-
 api.add_resource(AppListApi, '/apps')
 api.add_resource(AppTemplateApi, '/app-templates')
 api.add_resource(AppApi, '/apps/<uuid:app_id>')
 api.add_resource(AppCopy, '/apps/<uuid:app_id>/copy')
 api.add_resource(AppNameApi, '/apps/<uuid:app_id>/name')
+api.add_resource(AppIconApi, '/apps/<uuid:app_id>/icon')
 api.add_resource(AppSiteStatus, '/apps/<uuid:app_id>/site-enable')
 api.add_resource(AppApiStatus, '/apps/<uuid:app_id>/api-enable')
 api.add_resource(AppRateLimit, '/apps/<uuid:app_id>/rate-limit')
-api.add_resource(IntroductionGenerateApi, '/introduction-generate')

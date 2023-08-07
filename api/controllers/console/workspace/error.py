@@ -7,6 +7,12 @@ class RepeatPasswordNotMatchError(BaseHTTPException):
     code = 400
 
 
+class CurrentPasswordIncorrectError(BaseHTTPException):
+    error_code = 'current_password_incorrect'
+    description = "Current password is incorrect."
+    code = 400
+
+
 class ProviderRequestFailedError(BaseHTTPException):
     error_code = 'provider_request_failed'
     description = None
@@ -21,11 +27,11 @@ class InvalidInvitationCodeError(BaseHTTPException):
 
 class AccountAlreadyInitedError(BaseHTTPException):
     error_code = 'account_already_inited'
-    description = "Account already inited."
+    description = "The account has been initialized. Please refresh the page."
     code = 400
 
 
 class AccountNotInitializedError(BaseHTTPException):
     error_code = 'account_not_initialized'
-    description = "Account not initialized."
+    description = "The account has not been initialized yet. Please proceed with the initialization process first."
     code = 400

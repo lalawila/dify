@@ -1,11 +1,12 @@
-FROM langgenius/base:1.0.0-bullseye-slim
+FROM node:18.17.0-alpine
 
 LABEL maintainer="takatost@gmail.com"
 
+ENV NODE_ENV=production
 ENV EDITION SELF_HOSTED
 ENV DEPLOY_ENV PRODUCTION
-ENV CONSOLE_URL http://127.0.0.1:5001
-ENV APP_URL http://127.0.0.1:5001
+ENV CONSOLE_API_URL http://127.0.0.1:5001
+ENV APP_API_URL http://127.0.0.1:5001
 
 EXPOSE 3000
 
@@ -13,7 +14,9 @@ WORKDIR /app/web
 
 COPY package.json /app/web/package.json
 
-RUN npm install
+RUN npm install pm2 -g
+
+RUN npm install --only=prod
 
 COPY . /app/web/
 
@@ -26,4 +29,4 @@ RUN chmod +x /entrypoint.sh
 ARG COMMIT_SHA
 ENV COMMIT_SHA ${COMMIT_SHA}
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]

@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import tempfile
+import chardet
 import time
 import uuid
 from pathlib import Path
@@ -16,8 +17,7 @@ from controllers.console.datasets.error import NoFileUploadedError, TooManyFiles
     UnsupportedFileTypeError
 from controllers.console.setup import setup_required
 from controllers.console.wraps import account_initialization_required
-from core.index.readers.html_parser import HTMLParser
-from core.index.readers.pdf_parser import PDFParser
+from core.data_loader.file_extractor import FileExtractor
 from extensions.ext_storage import storage
 from libs.helper import TimestampField
 from extensions.ext_database import db
@@ -26,7 +26,7 @@ from models.model import UploadFile
 cache = TTLCache(maxsize=None, ttl=30)
 
 FILE_SIZE_LIMIT = 15 * 1024 * 1024  # 15MB
-ALLOWED_EXTENSIONS = ['txt', 'markdown', 'md', 'pdf', 'html', 'htm']
+ALLOWED_EXTENSIONS = ['txt', 'markdown', 'md', 'pdf', 'html', 'htm', 'xlsx']
 PREVIEW_WORDS_LIMIT = 3000
 
 
@@ -121,24 +121,7 @@ class FilePreviewApi(Resource):
         if extension not in ALLOWED_EXTENSIONS:
             raise UnsupportedFileTypeError()
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            suffix = Path(upload_file.key).suffix
-            filepath = f"{temp_dir}/{next(tempfile._get_candidate_names())}{suffix}"
-            storage.download(upload_file.key, filepath)
-
-            if extension == 'pdf':
-                parser = PDFParser({'upload_file': upload_file})
-                text = parser.parse_file(Path(filepath))
-            elif extension in ['html', 'htm']:
-                # Use BeautifulSoup to extract text
-                parser = HTMLParser()
-                text = parser.parse_file(Path(filepath))
-            else:
-                # ['txt', 'markdown', 'md']
-                with open(filepath, "rb") as fp:
-                    data = fp.read()
-                    text = data.decode(encoding='utf-8').strip() if data else ''
-
+        text = FileExtractor.load(upload_file, return_text=True)
         text = text[0:PREVIEW_WORDS_LIMIT] if text else ''
         return {'content': text}
 

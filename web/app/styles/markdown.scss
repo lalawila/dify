@@ -54,6 +54,7 @@
   font-weight: 400;
   line-height: 1.5;
   word-wrap: break-word;
+  word-break: break-word;
   user-select: text;
 }
 
@@ -108,7 +109,7 @@
 
 .markdown-body a {
   background-color: transparent;
-  color: var(--color-accent-fg);
+  color: #155EEF;
   text-decoration: none;
 }
 
@@ -593,6 +594,7 @@
 
 .markdown-body table th {
   font-weight: var(--base-text-weight-semibold, 600);
+  white-space: nowrap;
 }
 
 .markdown-body table th,
@@ -741,13 +743,14 @@
 
 .markdown-body pre code {
   font-size: 100%;
+  white-space: pre-wrap !important;
 }
 
 .markdown-body pre>code {
   padding: 0;
   margin: 0;
   word-break: normal;
-  white-space: pre;
+  white-space: pre-wrap;
   background: transparent;
   border: 0;
 }
@@ -777,7 +780,7 @@
   max-width: 100%;
   padding: 0;
   margin: 0;
-  overflow-x: scroll;
+  overflow-x: auto;
   line-height: inherit;
   word-wrap: normal;
   background-color: transparent;

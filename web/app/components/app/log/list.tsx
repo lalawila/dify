@@ -16,10 +16,10 @@ import dayjs from 'dayjs'
 import { createContext, useContext } from 'use-context-selector'
 import classNames from 'classnames'
 import { useTranslation } from 'react-i18next'
-import { EditIconSolid } from '../chat'
 import { randomString } from '../../app-sidebar/basic'
 import s from './style.module.css'
-import type { FeedbackFunc, Feedbacktype, IChatItem, SubmitAnnotationFunc } from '@/app/components/app/chat'
+import { EditIconSolid } from '@/app/components/app/chat/icon-component'
+import type { FeedbackFunc, Feedbacktype, IChatItem, SubmitAnnotationFunc } from '@/app/components/app/chat/type'
 import type { Annotation, ChatConversationFullDetailResponse, ChatConversationGeneralDetail, ChatConversationsResponse, ChatMessage, ChatMessagesRequest, CompletionConversationFullDetailResponse, CompletionConversationGeneralDetail, CompletionConversationsResponse } from '@/models/log'
 import type { App } from '@/types/app'
 import Loading from '@/app/components/base/loading'
@@ -166,7 +166,7 @@ function DetailPanel<T extends ChatConversationFullDetailResponse | CompletionCo
     return res
   })?.name ?? 'custom'
 
-  return (<div className='rounded-xl border-[0.5px] border-gray-200 h-full flex flex-col'>
+  return (<div className='rounded-xl border-[0.5px] border-gray-200 h-full flex flex-col overflow-auto'>
     {/* Panel Header */}
     <div className='border-b border-gray-100 py-4 px-6 flex items-center justify-between'>
       <div className='flex-1'>
@@ -207,7 +207,7 @@ function DetailPanel<T extends ChatConversationFullDetailResponse | CompletionCo
       <div className='text-gray-700 font-medium text-sm mt-2'>{detail.model_config?.pre_prompt || emptyText}</div>
     </div>
     {!isChatMode
-      ? <div className="px-2.5 py-4 overflow-y-auto">
+      ? <div className="px-2.5 py-4">
         <Chat
           chatList={getFormattedChatList([detail.message])}
           isHideSendInput={true}
@@ -217,7 +217,7 @@ function DetailPanel<T extends ChatConversationFullDetailResponse | CompletionCo
         />
       </div>
       : items.length < 8
-        ? <div className="px-2.5 pt-4 mb-4 overflow-y-auto">
+        ? <div className="px-2.5 pt-4 mb-4">
           <Chat
             chatList={items}
             isHideSendInput={true}
@@ -412,7 +412,7 @@ const ConversationList: FC<IConversationList> = ({ logs, appDetail, onRefresh })
         </thead>
         <tbody className="text-gray-500">
           {logs.data.map((log) => {
-            const endUser = log.from_end_user_id?.slice(0, 8)
+            const endUser = log.from_end_user_session_id
             const leftValue = get(log, isChatMode ? 'summary' : 'message.query')
             const rightValue = get(log, isChatMode ? 'message_count' : 'message.answer')
             return <tr

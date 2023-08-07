@@ -1,35 +1,51 @@
+/* eslint-disable no-mixed-operators */
 'use client'
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useBoolean } from 'ahooks'
-import type { File, PreProcessingRule, Rules, FileIndexingEstimateResponse as IndexingEstimateResponse } from '@/models/datasets'
-import {
-  fetchDefaultProcessRule,
-  createFirstDocument,
-  createDocument,
-  fetchFileIndexingEstimate as didFetchFileIndexingEstimate,
-} from '@/service/datasets'
-import type { CreateDocumentReq, createDocumentResponse } from '@/models/datasets'
-import Button from '@/app/components/base/button'
-import PreviewItem from './preview-item'
-import Loading from '@/app/components/base/loading'
 import { XMarkIcon } from '@heroicons/react/20/solid'
-
 import cn from 'classnames'
-import s from './index.module.css'
 import Link from 'next/link'
+import { groupBy } from 'lodash-es'
+import PreviewItem, { PreviewType } from './preview-item'
+import s from './index.module.css'
+import type { CreateDocumentReq, File, FullDocumentDetail, FileIndexingEstimateResponse as IndexingEstimateResponse, NotionInfo, PreProcessingRule, Rules, createDocumentResponse } from '@/models/datasets'
+import {
+  createDocument,
+  createFirstDocument,
+  fetchFileIndexingEstimate as didFetchFileIndexingEstimate,
+  fetchDefaultProcessRule,
+} from '@/service/datasets'
+import Button from '@/app/components/base/button'
+import Loading from '@/app/components/base/loading'
+
 import Toast from '@/app/components/base/toast'
 import { formatNumber } from '@/utils/format'
+import type { DataSourceNotionPage } from '@/models/common'
+import { DataSourceType } from '@/models/datasets'
+import NotionIcon from '@/app/components/base/notion-icon'
+import Switch from '@/app/components/base/switch'
+import { MessageChatSquare } from '@/app/components/base/icons/src/public/common'
+import { useDatasetDetailContext } from '@/context/dataset-detail'
+import { IS_CE_EDITION } from '@/config'
+
+type Page = DataSourceNotionPage & { workspace_id: string }
 
 type StepTwoProps = {
-  hasSetAPIKEY: boolean,
-  onSetting: () => void,
-  datasetId?: string,
-  indexingType?: string,
-  file?: File,
-  onStepChange: (delta: number) => void,
-  updateIndexingTypeCache: (type: string) => void,
-  updateResultCache: (res: createDocumentResponse) => void
+  isSetting?: boolean
+  documentDetail?: FullDocumentDetail
+  hasSetAPIKEY: boolean
+  onSetting: () => void
+  datasetId?: string
+  indexingType?: string
+  dataSourceType: DataSourceType
+  files: File[]
+  notionPages?: Page[]
+  onStepChange?: (delta: number) => void
+  updateIndexingTypeCache?: (type: string) => void
+  updateResultCache?: (res: createDocumentResponse) => void
+  onSave?: () => void
+  onCancel?: () => void
 }
 
 enum SegmentType {
@@ -40,18 +56,29 @@ enum IndexingType {
   QUALIFIED = 'high_quality',
   ECONOMICAL = 'economy',
 }
+enum DocForm {
+  TEXT = 'text_model',
+  QA = 'qa_model',
+}
 
 const StepTwo = ({
+  isSetting,
+  documentDetail,
   hasSetAPIKEY,
   onSetting,
   datasetId,
   indexingType,
-  file,
+  dataSourceType,
+  files,
+  notionPages = [],
   onStepChange,
   updateIndexingTypeCache,
   updateResultCache,
+  onSave,
+  onCancel,
 }: StepTwoProps) => {
   const { t } = useTranslation()
+  const { mutateDatasetRes } = useDatasetDetailContext()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrolled, setScrolled] = useState(false)
   const previewScrollRef = useRef<HTMLDivElement>(null)
@@ -63,9 +90,15 @@ const StepTwo = ({
   const [defaultConfig, setDefaultConfig] = useState<Rules>()
   const hasSetIndexType = !!indexingType
   const [indexType, setIndexType] = useState<IndexingType>(
-    indexingType ||
-      hasSetAPIKEY ? IndexingType.QUALIFIED : IndexingType.ECONOMICAL
+    indexingType
+      || hasSetAPIKEY
+      ? IndexingType.QUALIFIED
+      : IndexingType.ECONOMICAL,
   )
+  const [docForm, setDocForm] = useState<DocForm | string>(
+    datasetId && documentDetail ? documentDetail.doc_form : DocForm.TEXT,
+  )
+  const [previewSwitched, setPreviewSwitched] = useState(false)
   const [showPreview, { setTrue: setShowPreview, setFalse: hidePreview }] = useBoolean()
   const [customFileIndexingEstimate, setCustomFileIndexingEstimate] = useState<IndexingEstimateResponse | null>(null)
   const [automaticFileIndexingEstimate, setAutomaticFileIndexingEstimate] = useState<IndexingEstimateResponse | null>(null)
@@ -74,19 +107,19 @@ const StepTwo = ({
   })()
 
   const scrollHandle = (e: any) => {
-    if (e.target.scrollTop > 0) {
+    if (e.target.scrollTop > 0)
       setScrolled(true)
-    } else {
+
+    else
       setScrolled(false)
-    }
   }
 
   const previewScrollHandle = (e: any) => {
-    if (e.target.scrollTop > 0) {
+    if (e.target.scrollTop > 0)
       setPreviewScrolled(true)
-    } else {
+
+    else
       setPreviewScrolled(false)
-    }
   }
   const getFileName = (name: string) => {
     const arr = name.split('.')
@@ -94,18 +127,17 @@ const StepTwo = ({
   }
 
   const getRuleName = (key: string) => {
-    if (key === 'remove_extra_spaces') {
+    if (key === 'remove_extra_spaces')
       return t('datasetCreation.stepTwo.removeExtraSpaces')
-    }
-    if (key === 'remove_urls_emails') {
+
+    if (key === 'remove_urls_emails')
       return t('datasetCreation.stepTwo.removeUrlEmails')
-    }
-    if (key === 'remove_stopwords') {
+
+    if (key === 'remove_stopwords')
       return t('datasetCreation.stepTwo.removeStopwords')
-    }
   }
   const ruleChangeHandle = (id: string) => {
-    const newRules = rules.map(rule => {
+    const newRules = rules.map((rule) => {
       if (rule.id === id) {
         return {
           id: rule.id,
@@ -124,13 +156,24 @@ const StepTwo = ({
     }
   }
 
-  const confirmChangeCustomConfig = async () => {
-    setCustomFileIndexingEstimate(null)
-    setShowPreview()
-    await fetchFileIndexingEstimate()
+  const fetchFileIndexingEstimate = async (docForm = DocForm.TEXT) => {
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    const res = await didFetchFileIndexingEstimate(getFileIndexingEstimateParams(docForm))
+    if (segmentationType === SegmentType.CUSTOM)
+      setCustomFileIndexingEstimate(res)
+
+    else
+      setAutomaticFileIndexingEstimate(res)
   }
 
-  const getIndexing_technique = () => indexingType ? indexingType : indexType
+  const confirmChangeCustomConfig = () => {
+    setCustomFileIndexingEstimate(null)
+    setShowPreview()
+    fetchFileIndexingEstimate()
+    setPreviewSwitched(false)
+  }
+
+  const getIndexing_technique = () => indexingType || indexType
 
   const getProcessRule = () => {
     const processRule: any = {
@@ -150,36 +193,88 @@ const StepTwo = ({
     return processRule
   }
 
-  const getFileIndexingEstimateParams = () => {
-    const params = {
-      file_id: file?.id,
-      dataset_id: datasetId,
-      indexing_technique: getIndexing_technique(),
-      process_rule: getProcessRule(),
+  const getNotionInfo = () => {
+    const workspacesMap = groupBy(notionPages, 'workspace_id')
+    const workspaces = Object.keys(workspacesMap).map((workspaceId) => {
+      return {
+        workspaceId,
+        pages: workspacesMap[workspaceId],
+      }
+    })
+    return workspaces.map((workspace) => {
+      return {
+        workspace_id: workspace.workspaceId,
+        pages: workspace.pages.map((page) => {
+          const { page_id, page_name, page_icon, type } = page
+          return {
+            page_id,
+            page_name,
+            page_icon,
+            type,
+          }
+        }),
+      }
+    }) as NotionInfo[]
+  }
+
+  const getFileIndexingEstimateParams = (docForm: DocForm) => {
+    let params
+    if (dataSourceType === DataSourceType.FILE) {
+      params = {
+        info_list: {
+          data_source_type: dataSourceType,
+          file_info_list: {
+            file_ids: files.map(file => file.id),
+          },
+        },
+        indexing_technique: getIndexing_technique(),
+        process_rule: getProcessRule(),
+        doc_form: docForm,
+      }
+    }
+    if (dataSourceType === DataSourceType.NOTION) {
+      params = {
+        info_list: {
+          data_source_type: dataSourceType,
+          notion_info_list: getNotionInfo(),
+        },
+        indexing_technique: getIndexing_technique(),
+        process_rule: getProcessRule(),
+        doc_form: docForm,
+      }
     }
     return params
   }
 
-  const fetchFileIndexingEstimate = async () => {
-    const res = await didFetchFileIndexingEstimate(getFileIndexingEstimateParams())
-    if (segmentationType === SegmentType.CUSTOM) {
-      setCustomFileIndexingEstimate(res)
+  const getCreationParams = () => {
+    let params
+    if (isSetting) {
+      params = {
+        original_document_id: documentDetail?.id,
+        doc_form: docForm,
+        process_rule: getProcessRule(),
+      } as CreateDocumentReq
     }
     else {
-      setAutomaticFileIndexingEstimate(res)
+      params = {
+        data_source: {
+          type: dataSourceType,
+          info_list: {
+            data_source_type: dataSourceType,
+          },
+        },
+        indexing_technique: getIndexing_technique(),
+        process_rule: getProcessRule(),
+        doc_form: docForm,
+      } as CreateDocumentReq
+      if (dataSourceType === DataSourceType.FILE) {
+        params.data_source.info_list.file_info_list = {
+          file_ids: files.map(file => file.id),
+        }
+      }
+      if (dataSourceType === DataSourceType.NOTION)
+        params.data_source.info_list.notion_info_list = getNotionInfo()
     }
-  }
-
-  const getCreationParams = () => {
-    const params = {
-      data_source: {
-        type: 'upload_file',
-        info: file?.id,
-        name: file?.name,
-      },
-      indexing_technique: getIndexing_technique(),
-      process_rule: getProcessRule(),
-    } as CreateDocumentReq
     return params
   }
 
@@ -196,64 +291,118 @@ const StepTwo = ({
       console.log(err)
     }
   }
+
+  const getRulesFromDetail = () => {
+    if (documentDetail) {
+      const rules = documentDetail.dataset_process_rule.rules
+      const separator = rules.segmentation.separator
+      const max = rules.segmentation.max_tokens
+      setSegmentIdentifier(separator === '\n' ? '\\n' : separator || '\\n')
+      setMax(max)
+      setRules(rules.pre_processing_rules)
+      setDefaultConfig(rules)
+    }
+  }
+
+  const getDefaultMode = () => {
+    if (documentDetail)
+      setSegmentationType(documentDetail.dataset_process_rule.mode)
+  }
+
   const createHandle = async () => {
     try {
-      let res;
+      let res
       const params = getCreationParams()
       if (!datasetId) {
         res = await createFirstDocument({
-          body: params
+          body: params,
         })
-        updateIndexingTypeCache(indexType)
-        updateResultCache(res)
-      } else {
+        updateIndexingTypeCache && updateIndexingTypeCache(indexType)
+        updateResultCache && updateResultCache(res)
+      }
+      else {
         res = await createDocument({
           datasetId,
-          body: params
+          body: params,
         })
-        updateIndexingTypeCache(indexType)
-        updateResultCache({
-          document: res,
-        })
+        updateIndexingTypeCache && updateIndexingTypeCache(indexType)
+        updateResultCache && updateResultCache(res)
       }
-      onStepChange(+1)
+      if (mutateDatasetRes)
+        mutateDatasetRes()
+      onStepChange && onStepChange(+1)
+      isSetting && onSave && onSave()
     }
     catch (err) {
       Toast.notify({
         type: 'error',
-        message: err + '',
+        message: `${err}`,
       })
     }
   }
 
+  const handleSwitch = (state: boolean) => {
+    if (state)
+      setDocForm(DocForm.QA)
+    else
+      setDocForm(DocForm.TEXT)
+  }
+
+  const changeToEconomicalType = () => {
+    if (!hasSetIndexType) {
+      setIndexType(IndexingType.ECONOMICAL)
+      setDocForm(DocForm.TEXT)
+    }
+  }
+
+  const previewSwitch = async () => {
+    setPreviewSwitched(true)
+    if (segmentationType === SegmentType.AUTO)
+      setAutomaticFileIndexingEstimate(null)
+    else
+      setCustomFileIndexingEstimate(null)
+    await fetchFileIndexingEstimate(DocForm.QA)
+  }
+
   useEffect(() => {
     // fetch rules
-    getRules()
+    if (!isSetting) {
+      getRules()
+    }
+    else {
+      getRulesFromDetail()
+      getDefaultMode()
+    }
   }, [])
 
   useEffect(() => {
-    scrollRef.current?.addEventListener('scroll', scrollHandle);
+    scrollRef.current?.addEventListener('scroll', scrollHandle)
     return () => {
-      scrollRef.current?.removeEventListener('scroll', scrollHandle);
+      scrollRef.current?.removeEventListener('scroll', scrollHandle)
     }
   }, [])
 
   useLayoutEffect(() => {
     if (showPreview) {
-      previewScrollRef.current?.addEventListener('scroll', previewScrollHandle);
+      previewScrollRef.current?.addEventListener('scroll', previewScrollHandle)
       return () => {
-        previewScrollRef.current?.removeEventListener('scroll', previewScrollHandle);
+        previewScrollRef.current?.removeEventListener('scroll', previewScrollHandle)
       }
     }
   }, [showPreview])
 
   useEffect(() => {
+    if (indexingType === IndexingType.ECONOMICAL && docForm === DocForm.QA)
+      setDocForm(DocForm.TEXT)
+  }, [indexingType, docForm])
+
+  useEffect(() => {
     // get indexing type by props
-    if (indexingType) {
+    if (indexingType)
       setIndexType(indexingType as IndexingType)
-    } else {
+
+    else
       setIndexType(hasSetAPIKEY ? IndexingType.QUALIFIED : IndexingType.ECONOMICAL)
-    }
   }, [hasSetAPIKEY, indexingType, datasetId])
 
   useEffect(() => {
@@ -261,9 +410,12 @@ const StepTwo = ({
       setAutomaticFileIndexingEstimate(null)
       setShowPreview()
       fetchFileIndexingEstimate()
-    } else {
+      setPreviewSwitched(false)
+    }
+    else {
       hidePreview()
       setCustomFileIndexingEstimate(null)
+      setPreviewSwitched(false)
     }
   }, [segmentationType, indexType])
 
@@ -274,12 +426,11 @@ const StepTwo = ({
         <div className={cn(s.form)}>
           <div className={s.label}>{t('datasetCreation.stepTwo.segmentation')}</div>
           <div className='max-w-[640px]'>
-
             <div
               className={cn(
                 s.radioItem,
                 s.segmentationItem,
-                segmentationType === SegmentType.AUTO && s.active
+                segmentationType === SegmentType.AUTO && s.active,
               )}
               onClick={() => setSegmentationType(SegmentType.AUTO)}
             >
@@ -314,7 +465,7 @@ const StepTwo = ({
                         type="text"
                         className={s.input}
                         placeholder={t('datasetCreation.stepTwo.separatorPlaceholder') || ''} value={segmentIdentifier}
-                        onChange={(e) => setSegmentIdentifier(e.target.value)}
+                        onChange={e => setSegmentIdentifier(e.target.value)}
                       />
                     </div>
                   </div>
@@ -325,7 +476,7 @@ const StepTwo = ({
                         type="number"
                         className={s.input}
                         placeholder={t('datasetCreation.stepTwo.separatorPlaceholder') || ''} value={max}
-                        onChange={(e) => setMax(Number(e.target.value))}
+                        onChange={e => setMax(Number(e.target.value))}
                       />
                     </div>
                   </div>
@@ -362,9 +513,8 @@ const StepTwo = ({
                     hasSetIndexType && '!w-full',
                   )}
                   onClick={() => {
-                    if (hasSetAPIKEY) {
+                    if (hasSetAPIKEY)
                       setIndexType(IndexingType.QUALIFIED)
-                    }
                   }}
                 >
                   <span className={cn(s.typeIcon, s.qualified)} />
@@ -377,11 +527,13 @@ const StepTwo = ({
                     <div className={s.tip}>{t('datasetCreation.stepTwo.qualifiedTip')}</div>
                     <div className='pb-0.5 text-xs font-medium text-gray-500'>{t('datasetCreation.stepTwo.emstimateCost')}</div>
                     {
-                      !!fileIndexingEstimate ? (
-                        <div className='text-xs font-medium text-gray-800'>{formatNumber(fileIndexingEstimate.tokens)} tokens(<span className='text-yellow-500'>${formatNumber(fileIndexingEstimate.total_price)}</span>)</div>
-                      ) : (
-                        <div className={s.calculating}>{t('datasetCreation.stepTwo.calculating')}</div>
-                      )
+                      fileIndexingEstimate
+                        ? (
+                          <div className='text-xs font-medium text-gray-800'>{formatNumber(fileIndexingEstimate.tokens)} tokens(<span className='text-yellow-500'>${formatNumber(fileIndexingEstimate.total_price)}</span>)</div>
+                        )
+                        : (
+                          <div className={s.calculating}>{t('datasetCreation.stepTwo.calculating')}</div>
+                        )
                     }
                   </div>
                   {!hasSetAPIKEY && (
@@ -393,7 +545,6 @@ const StepTwo = ({
                 </div>
               )}
 
-
               {(!hasSetIndexType || (hasSetIndexType && indexingType === IndexingType.ECONOMICAL)) && (
                 <div
                   className={cn(
@@ -403,7 +554,7 @@ const StepTwo = ({
                     hasSetIndexType && s.disabled,
                     hasSetIndexType && '!w-full',
                   )}
-                  onClick={() => !hasSetIndexType && setIndexType(IndexingType.ECONOMICAL)}
+                  onClick={changeToEconomicalType}
                 >
                   <span className={cn(s.typeIcon, s.economical)} />
                   {!hasSetIndexType && <span className={cn(s.radio)} />}
@@ -422,57 +573,147 @@ const StepTwo = ({
                 <Link className='text-[#155EEF]' href={`/datasets/${datasetId}/settings`}>{t('datasetCreation.stepTwo.datasetSettingLink')}</Link>
               </div>
             )}
-            <div className={s.file}>
-              <div className={s.fileContent}>
-                <div className='mb-2 text-xs font-medium text-gray-500'>{t('datasetCreation.stepTwo.fileName')}</div>
-                <div className='flex items-center text-sm leading-6 font-medium text-gray-800'>
-                  <span className={cn(s.fileIcon, file && s[file.extension])} />
-                  {getFileName(file?.name || '')}
+            {IS_CE_EDITION && indexType === IndexingType.QUALIFIED && (
+              <div className='flex justify-between items-center mt-3 px-5 py-4 rounded-xl bg-gray-50 border border-gray-100'>
+                <div className='flex justify-center items-center w-8 h-8 rounded-lg bg-indigo-50'>
+                  <MessageChatSquare className='w-4 h-4' />
+                </div>
+                <div className='grow mx-3'>
+                  <div className='mb-[2px] text-md font-medium text-gray-900'>{t('datasetCreation.stepTwo.QATitle')}</div>
+                  <div className='text-[13px] leading-[18px] text-gray-500'>{t('datasetCreation.stepTwo.QATip')}</div>
+                </div>
+                <div className='shrink-0'>
+                  <Switch
+                    defaultValue={docForm === DocForm.QA}
+                    onChange={handleSwitch}
+                    size='md'
+                  />
                 </div>
               </div>
+            )}
+            <div className={s.source}>
+              <div className={s.sourceContent}>
+                {dataSourceType === DataSourceType.FILE && (
+                  <>
+                    <div className='mb-2 text-xs font-medium text-gray-500'>{t('datasetCreation.stepTwo.fileSource')}</div>
+                    <div className='flex items-center text-sm leading-6 font-medium text-gray-800'>
+                      <span className={cn(s.fileIcon, files.length && s[files[0].extension])} />
+                      {getFileName(files[0].name || '')}
+                      {files.length > 1 && (
+                        <span className={s.sourceCount}>
+                          <span>{t('datasetCreation.stepTwo.other')}</span>
+                          <span>{files.length - 1}</span>
+                          <span>{t('datasetCreation.stepTwo.fileUnit')}</span>
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
+                {dataSourceType === DataSourceType.NOTION && (
+                  <>
+                    <div className='mb-2 text-xs font-medium text-gray-500'>{t('datasetCreation.stepTwo.notionSource')}</div>
+                    <div className='flex items-center text-sm leading-6 font-medium text-gray-800'>
+                      <NotionIcon
+                        className='shrink-0 mr-1'
+                        type='page'
+                        src={notionPages[0]?.page_icon}
+                      />
+                      {notionPages[0]?.page_name}
+                      {notionPages.length > 1 && (
+                        <span className={s.sourceCount}>
+                          <span>{t('datasetCreation.stepTwo.other')}</span>
+                          <span>{notionPages.length - 1}</span>
+                          <span>{t('datasetCreation.stepTwo.notionUnit')}</span>
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
               <div className={s.divider} />
-              <div className={s.fileContent}>
+              <div className={s.segmentCount}>
                 <div className='mb-2 text-xs font-medium text-gray-500'>{t('datasetCreation.stepTwo.emstimateSegment')}</div>
                 <div className='flex items-center text-sm leading-6 font-medium text-gray-800'>
                   {
-                    !!fileIndexingEstimate ? (
-                      <div className='text-xs font-medium text-gray-800'>{formatNumber(fileIndexingEstimate.total_segments)} </div>
-                    ) : (
-                      <div className={s.calculating}>{t('datasetCreation.stepTwo.calculating')}</div>
-                    )
+                    fileIndexingEstimate
+                      ? (
+                        <div className='text-xs font-medium text-gray-800'>{formatNumber(fileIndexingEstimate.total_segments)} </div>
+                      )
+                      : (
+                        <div className={s.calculating}>{t('datasetCreation.stepTwo.calculating')}</div>
+                      )
                   }
                 </div>
               </div>
             </div>
-            <div className='flex items-center mt-8 py-2'>
-              <Button onClick={() => onStepChange(-1)}>{t('datasetCreation.stepTwo.lastStep')}</Button>
-              <div className={s.divider} />
-              <Button type='primary' onClick={createHandle}>{t('datasetCreation.stepTwo.nextStep')}</Button>
-            </div>
+            {!isSetting
+              ? (
+                <div className='flex items-center mt-8 py-2'>
+                  <Button onClick={() => onStepChange && onStepChange(-1)}>{t('datasetCreation.stepTwo.lastStep')}</Button>
+                  <div className={s.divider} />
+                  <Button type='primary' onClick={createHandle}>{t('datasetCreation.stepTwo.nextStep')}</Button>
+                </div>
+              )
+              : (
+                <div className='flex items-center mt-8 py-2'>
+                  <Button type='primary' onClick={createHandle}>{t('datasetCreation.stepTwo.save')}</Button>
+                  <Button className='ml-2' onClick={onCancel}>{t('datasetCreation.stepTwo.cancel')}</Button>
+                </div>
+              )}
           </div>
         </div>
       </div>
-      {(showPreview) ? (
-        <div ref={previewScrollRef} className={cn(s.previewWrap, 'relativeh-full overflow-y-scroll border-l border-[#F2F4F7]')}>
-          <div className={cn(s.previewHeader, previewScrolled && `${s.fixed} pb-3`, ' flex items-center justify-between px-8')}>
-            <span>{t('datasetCreation.stepTwo.previewTitle')}</span>
-            <div className='flex items-center justify-center w-6 h-6 cursor-pointer' onClick={hidePreview}>
-              <XMarkIcon className='h-4 w-4'></XMarkIcon>
+      {(showPreview)
+        ? (
+          <div ref={previewScrollRef} className={cn(s.previewWrap, 'relativeh-full overflow-y-scroll border-l border-[#F2F4F7]')}>
+            <div className={cn(s.previewHeader, previewScrolled && `${s.fixed} pb-3`)}>
+              <div className='flex items-center justify-between px-8'>
+                <div className='grow flex items-center'>
+                  <div>{t('datasetCreation.stepTwo.previewTitle')}</div>
+                  {docForm === DocForm.QA && !previewSwitched && (
+                    <Button className='ml-2 !h-[26px] !py-[3px] !px-2 !text-xs !font-medium !text-primary-600' onClick={previewSwitch}>{t('datasetCreation.stepTwo.previewButton')}</Button>
+                  )}
+                </div>
+                <div className='flex items-center justify-center w-6 h-6 cursor-pointer' onClick={hidePreview}>
+                  <XMarkIcon className='h-4 w-4'></XMarkIcon>
+                </div>
+              </div>
+              {docForm === DocForm.QA && !previewSwitched && (
+                <div className='px-8 pr-12 text-xs text-gray-500'>
+                  <span>{t('datasetCreation.stepTwo.previewSwitchTipStart')}</span>
+                  <span className='text-amber-600'>{t('datasetCreation.stepTwo.previewSwitchTipEnd')}</span>
+                </div>
+              )}
+            </div>
+            <div className='my-4 px-8 space-y-4'>
+              {previewSwitched && docForm === DocForm.QA && fileIndexingEstimate?.qa_preview && (
+                <>
+                  {fileIndexingEstimate?.qa_preview.map((item, index) => (
+                    <PreviewItem type={PreviewType.QA} key={item.question} qa={item} index={index + 1} />
+                  ))}
+                </>
+              )}
+              {(docForm === DocForm.TEXT || !previewSwitched) && fileIndexingEstimate?.preview && (
+                <>
+                  {fileIndexingEstimate?.preview.map((item, index) => (
+                    <PreviewItem type={PreviewType.TEXT} key={item} content={item} index={index + 1} />
+                  ))}
+                </>
+              )}
+              {previewSwitched && docForm === DocForm.QA && !fileIndexingEstimate?.qa_preview && (
+                <div className='flex items-center justify-center h-[200px]'>
+                  <Loading type='area' />
+                </div>
+              )}
+              {!previewSwitched && !fileIndexingEstimate?.preview && (
+                <div className='flex items-center justify-center h-[200px]'>
+                  <Loading type='area' />
+                </div>
+              )}
             </div>
           </div>
-          <div className='my-4 px-8 space-y-4'>
-            {fileIndexingEstimate?.preview ? (
-              <>
-                {fileIndexingEstimate?.preview.map((item, index) => (
-                  <PreviewItem key={item} content={item} index={index + 1} />
-                ))}
-              </>
-            ) : <div className='flex items-center justify-center h-[200px]'><Loading type='area'></Loading></div>
-            }
-          </div>
-        </div>
-      ) :
-        (<div className={cn(s.sideTip)}>
+        )
+        : (<div className={cn(s.sideTip)}>
           <div className={s.tipCard}>
             <span className={s.icon} />
             <div className={s.title}>{t('datasetCreation.stepTwo.sideTipTitle')}</div>

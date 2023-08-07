@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+from flask import request
 from flask_restful import fields, marshal_with, reqparse
 from flask_restful.inputs import int_range
 from werkzeug.exceptions import NotFound
@@ -48,6 +49,24 @@ class ConversationApi(AppApiResource):
         except services.errors.conversation.LastConversationNotExistsError:
             raise NotFound("Last Conversation Not Exists.")
 
+class ConversationDetailApi(AppApiResource):
+    @marshal_with(conversation_fields)
+    def delete(self, app_model, end_user, c_id):
+        if app_model.mode != 'chat':
+            raise NotChatAppError()
+
+        conversation_id = str(c_id)
+
+        user = request.get_json().get('user')
+
+        if end_user is None and user is not None:
+            end_user = create_or_update_end_user_for_user_id(app_model, user)
+
+        try:
+            ConversationService.delete(app_model, conversation_id, end_user)
+        except services.errors.conversation.ConversationNotExistsError:
+            raise NotFound("Conversation Not Exists.")
+        return {"result": "success"}, 204
 
 class ConversationRenameApi(AppApiResource):
 
@@ -74,3 +93,5 @@ class ConversationRenameApi(AppApiResource):
 
 api.add_resource(ConversationRenameApi, '/conversations/<uuid:c_id>/name', endpoint='conversation_name')
 api.add_resource(ConversationApi, '/conversations')
+api.add_resource(ConversationApi, '/conversations/<uuid:c_id>', endpoint='conversation')
+api.add_resource(ConversationDetailApi, '/conversations/<uuid:c_id>', endpoint='conversation_detail')

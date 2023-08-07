@@ -15,6 +15,7 @@ const translation = {
         entry: 'Share',
         explanation: 'Share the following URL to invite more people to access the application.',
         shareUrl: 'Share URL',
+        linkCopied: 'Copied',
         copyLink: 'Copy Link',
         regenerate: 'Regenerate',
       },
@@ -35,6 +36,15 @@ const translation = {
           privacyPolicyPlaceholder: 'Enter the privacy policy',
           privacyPolicyTip: 'Helps visitors understand the data the application collects, see QiyeGPT\'s <privacyPolicyLink>Privacy Policy</privacyPolicyLink>.',
         },
+      },
+      embedded: {
+        entry: 'Embedded',
+        title: 'Embed on website',
+        explanation: 'Choose the way to embed chat app to your website',
+        iframe: 'To add the chat app any where on your website, add this iframe to your html code.',
+        scripts: 'To add a chat app to the bottom right of your website add this code to your html.',
+        copied: 'Copied',
+        copy: 'Copy',
       },
       customize: {
         way: 'way',
@@ -71,6 +81,8 @@ const translation = {
   },
   analysis: {
     title: 'Analysis',
+    ms: 'ms',
+    tokenPS: 'Token/s',
     totalMessages: {
       title: 'Total Messages',
       explanation: 'Daily AI interactions count; prompt engineering/debugging excluded.',
@@ -95,6 +107,10 @@ const translation = {
     avgResponseTime: {
       title: 'Avg. Response Time',
       explanation: 'Time (ms) for AI to process/respond; for text-based apps.',
+    },
+    tps: {
+      title: 'Token Output Speed',
+      explanation: 'Measure the performance of the LLM. Count the Tokens output speed of LLM from the beginning of the request to the completion of the output.',
     },
   },
 }

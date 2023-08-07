@@ -17,6 +17,7 @@ const translation = {
         shareUrl: '分享 URL',
         copyLink: '复制链接',
         regenerate: '重新生成',
+        linkCopied: '已复制',
       },
       preUseReminder: '使用前请先打开开关',
       settings: {
@@ -35,6 +36,15 @@ const translation = {
           privacyPolicyPlaceholder: '请输入隐私政策',
           privacyPolicyTip: '帮助访问者了解该应用收集的数据，可参考 QiyeGPT 的<privacyPolicyLink>隐私政策</privacyPolicyLink>。',
         },
+      },
+      embedded: {
+        entry: '嵌入',
+        title: '嵌入到网站中',
+        explanation: '选择一种方式将聊天应用嵌入到你的网站中',
+        iframe: '将以下 iframe 嵌入到你的网站中的目标位置',
+        scripts: '将以下代码嵌入到你的网站中',
+        copied: '已复制',
+        copy: '复制',
       },
       customize: {
         way: '方法',
@@ -71,6 +81,8 @@ const translation = {
   },
   analysis: {
     title: '分析',
+    ms: '毫秒',
+    tokenPS: 'Token/秒',
     totalMessages: {
       title: '全部消息数',
       explanation: '反映 AI 每天的互动总次数，每回答用户一个问题算一条 Message。提示词编排和调试的消息不计入。',
@@ -95,6 +107,10 @@ const translation = {
     avgResponseTime: {
       title: '平均响应时间',
       explanation: '衡量 AI 应用处理和回复用户请求所花费的平均时间，单位为毫秒，反映性能和用户体验。仅在文本型应用提供。',
+    },
+    tps: {
+      title: 'Token 输出速度',
+      explanation: '衡量 LLM 的性能。统计 LLM 从请求开始到输出完毕这段期间的 Tokens 输出速度。',
     },
   },
 }

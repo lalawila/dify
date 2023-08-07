@@ -95,6 +95,7 @@ class CompletionConversationApi(Resource):
         'status': fields.String,
         'from_source': fields.String,
         'from_end_user_id': fields.String,
+        'from_end_user_session_id': fields.String(),
         'from_account_id': fields.String,
         'read_at': TimestampField,
         'created_at': TimestampField,
@@ -160,7 +161,7 @@ class CompletionConversationApi(Resource):
 
         if args['end']:
             end_datetime = datetime.strptime(args['end'], '%Y-%m-%d %H:%M')
-            end_datetime = end_datetime.replace(second=0)
+            end_datetime = end_datetime.replace(second=59)
 
             end_datetime_timezone = timezone.localize(end_datetime)
             end_datetime_utc = end_datetime_timezone.astimezone(utc_timezone)
@@ -209,6 +210,26 @@ class CompletionConversationDetailApi(Resource):
         conversation_id = str(conversation_id)
 
         return _get_conversation(app_id, conversation_id, 'completion')
+    
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def delete(self, app_id, conversation_id):
+        app_id = str(app_id)
+        conversation_id = str(conversation_id)
+
+        app = _get_app(app_id, 'chat')
+
+        conversation = db.session.query(Conversation) \
+            .filter(Conversation.id == conversation_id, Conversation.app_id == app.id).first()
+
+        if not conversation:
+            raise NotFound("Conversation Not Exists.")
+
+        conversation.is_deleted = True
+        db.session.commit()
+
+        return {'result': 'success'}, 204
 
 
 class ChatConversationApi(Resource):
@@ -226,6 +247,7 @@ class ChatConversationApi(Resource):
         'status': fields.String,
         'from_source': fields.String,
         'from_end_user_id': fields.String,
+        'from_end_user_session_id': fields.String,
         'from_account_id': fields.String,
         'summary': fields.String(attribute='summary_or_query'),
         'read_at': TimestampField,
@@ -296,7 +318,7 @@ class ChatConversationApi(Resource):
 
         if args['end']:
             end_datetime = datetime.strptime(args['end'], '%Y-%m-%d %H:%M')
-            end_datetime = end_datetime.replace(second=0)
+            end_datetime = end_datetime.replace(second=59)
 
             end_datetime_timezone = timezone.localize(end_datetime)
             end_datetime_utc = end_datetime_timezone.astimezone(utc_timezone)
@@ -356,6 +378,27 @@ class ChatConversationDetailApi(Resource):
         conversation_id = str(conversation_id)
 
         return _get_conversation(app_id, conversation_id, 'chat')
+    
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def delete(self, app_id, conversation_id):
+        app_id = str(app_id)
+        conversation_id = str(conversation_id)
+
+        # get app info
+        app = _get_app(app_id, 'chat')
+
+        conversation = db.session.query(Conversation) \
+            .filter(Conversation.id == conversation_id, Conversation.app_id == app.id).first()
+
+        if not conversation:
+            raise NotFound("Conversation Not Exists.")
+
+        conversation.is_deleted = True
+        db.session.commit()
+
+        return {'result': 'success'}, 204
 
 
 

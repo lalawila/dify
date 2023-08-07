@@ -1,5 +1,5 @@
 import { createContext } from 'use-context-selector'
-import type { CompletionParams, Inputs, ModelConfig, PromptConfig, MoreLikeThisConfig, SuggestedQuestionsAfterAnswerConfig } from '@/models/debug'
+import type { CompletionParams, Inputs, ModelConfig, MoreLikeThisConfig, PromptConfig, SpeechToTextConfig, SuggestedQuestionsAfterAnswerConfig } from '@/models/debug'
 import type { DataSet } from '@/models/datasets'
 
 type IDebugConfiguration = {
@@ -15,10 +15,12 @@ type IDebugConfiguration = {
   setControlClearChatMessage: (controlClearChatMessage: number) => void
   prevPromptConfig: PromptConfig
   setPrevPromptConfig: (prevPromptConfig: PromptConfig) => void
-  moreLikeThisConifg: MoreLikeThisConfig,
-  setMoreLikeThisConifg: (moreLikeThisConfig: MoreLikeThisConfig) => void
-  suggestedQuestionsAfterAnswerConfig: SuggestedQuestionsAfterAnswerConfig,
+  moreLikeThisConfig: MoreLikeThisConfig
+  setMoreLikeThisConfig: (moreLikeThisConfig: MoreLikeThisConfig) => void
+  suggestedQuestionsAfterAnswerConfig: SuggestedQuestionsAfterAnswerConfig
   setSuggestedQuestionsAfterAnswerConfig: (suggestedQuestionsAfterAnswerConfig: SuggestedQuestionsAfterAnswerConfig) => void
+  speechToTextConfig: SpeechToTextConfig
+  setSpeechToTextConfig: (speechToTextConfig: SpeechToTextConfig) => void
   formattingChanged: boolean
   setFormattingChanged: (formattingChanged: boolean) => void
   inputs: Inputs
@@ -51,14 +53,18 @@ const DebugConfigurationContext = createContext<IDebugConfiguration>({
     prompt_variables: [],
   },
   setPrevPromptConfig: () => { },
-  moreLikeThisConifg: {
+  moreLikeThisConfig: {
     enabled: false,
   },
-  setMoreLikeThisConifg: () => { },
+  setMoreLikeThisConfig: () => { },
   suggestedQuestionsAfterAnswerConfig: {
     enabled: false,
   },
   setSuggestedQuestionsAfterAnswerConfig: () => { },
+  speechToTextConfig: {
+    enabled: false,
+  },
+  setSpeechToTextConfig: () => { },
   formattingChanged: false,
   setFormattingChanged: () => { },
   inputs: {},

@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import useSWR from 'swr'
-import { fetchProviders } from '@/service/common'
-import ProviderItem from './provider-item'
-import OpenaiHostedProvider from './openai-hosted-provider'
-import type { ProviderHosted } from '@/models/common'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
+import ProviderItem from './provider-item'
+import OpenaiHostedProvider from './openai-hosted-provider'
+import AnthropicHostedProvider from './anthropic-hosted-provider'
+import type { ProviderHosted } from '@/models/common'
+import { fetchProviders } from '@/service/common'
 import { IS_CE_EDITION } from '@/config'
 
-const providersMap: {[k: string]: any} = {
+const providersMap: { [k: string]: any } = {
   'openai-custom': {
     icon: 'openai',
     name: 'OpenAI',
@@ -17,7 +18,11 @@ const providersMap: {[k: string]: any} = {
   'azure_openai-custom': {
     icon: 'azure',
     name: 'Azure OpenAI Service',
-  }
+  },
+  'anthropic-custom': {
+    icon: 'anthropic',
+    name: 'Anthropic',
+  },
 }
 
 // const providersList = [
@@ -56,7 +61,7 @@ const ProviderPage = () => {
   const { t } = useTranslation()
   const [activeProviderId, setActiveProviderId] = useState('')
   const { data, mutate } = useSWR({ url: '/workspaces/current/providers' }, fetchProviders)
-  const providers = data?.filter(provider => providersMap[`${provider.provider_name}-${provider.provider_type}`])?.map(provider => {
+  const providers = data?.filter(provider => providersMap[`${provider.provider_name}-${provider.provider_type}`])?.map((provider) => {
     const providerKey = `${provider.provider_name}-${provider.provider_type}`
     return {
       provider,
@@ -65,14 +70,26 @@ const ProviderPage = () => {
     }
   })
   const providerHosted = data?.filter(provider => provider.provider_name === 'openai' && provider.provider_type === 'system')?.[0]
+  const anthropicHosted = data?.filter(provider => provider.provider_name === 'anthropic' && provider.provider_type === 'system')?.[0]
+  const providedOpenaiProvider = data?.find(provider => provider.is_enabled && (provider.provider_name === 'openai' || provider.provider_name === 'azure_openai'))
 
   return (
-    <div>
+    <div className='pb-7'>
       {
         providerHosted && !IS_CE_EDITION && (
           <>
             <div>
               <OpenaiHostedProvider provider={providerHosted as ProviderHosted} />
+            </div>
+            <div className='my-5 w-full h-0 border-[0.5px] border-gray-100' />
+          </>
+        )
+      }
+      {
+        anthropicHosted && !IS_CE_EDITION && (
+          <>
+            <div>
+              <AnthropicHostedProvider provider={anthropicHosted as ProviderHosted} />
             </div>
             <div className='my-5 w-full h-0 border-[0.5px] border-gray-100' />
           </>
@@ -89,11 +106,12 @@ const ProviderPage = () => {
               activeId={activeProviderId}
               onActive={aid => setActiveProviderId(aid)}
               onSave={() => mutate()}
+              providedOpenaiProvider={providedOpenaiProvider}
             />
           ))
         }
       </div>
-      <div className='absolute bottom-0 w-full h-[42px] flex items-center bg-white text-xs text-gray-500'>
+      <div className='fixed bottom-0 w-[472px] h-[42px] flex items-center bg-white text-xs text-gray-500'>
         <LockClosedIcon className='w-3 h-3 mr-1' />
         {t('common.provider.encrypted.front')}
         <Link

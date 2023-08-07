@@ -1,17 +1,26 @@
 import datetime
-import json
+import logging
 import random
 import string
+import time
 
 import click
+from flask import current_app
+from werkzeug.exceptions import NotFound
 
+from core.index.index import IndexBuilder
 from libs.password import password_pattern, valid_password, hash_password
 from libs.helper import email as email_validate
 from extensions.ext_database import db
-from models.account import InvitationCode
-from models.model import Account, AppModelConfig, ApiToken, Site, App, RecommendedApp
+from libs.rsa import generate_key_pair
+from models.account import InvitationCode, Tenant
+from models.dataset import Dataset, DatasetQuery, Document, DocumentSegment
+from models.model import Account
 import secrets
 import base64
+
+from models.provider import Provider, ProviderName
+from services.provider_service import ProviderService
 
 
 @click.command('reset-password', help='Reset the account password.')
@@ -74,6 +83,31 @@ def reset_email(email, new_email, email_confirm):
     click.echo(click.style('Congratulations!, email has been reset.', fg='green'))
 
 
+@click.command('reset-encrypt-key-pair', help='Reset the asymmetric key pair of workspace for encrypt LLM credentials. '
+                                              'After the reset, all LLM credentials will become invalid, '
+                                              'requiring re-entry.'
+                                              'Only support SELF_HOSTED mode.')
+@click.confirmation_option(prompt=click.style('Are you sure you want to reset encrypt key pair?'
+                                              ' this operation cannot be rolled back!', fg='red'))
+def reset_encrypt_key_pair():
+    if current_app.config['EDITION'] != 'SELF_HOSTED':
+        click.echo(click.style('Sorry, only support SELF_HOSTED mode.', fg='red'))
+        return
+
+    tenant = db.session.query(Tenant).first()
+    if not tenant:
+        click.echo(click.style('Sorry, no workspace found. Please enter /install to initialize.', fg='red'))
+        return
+
+    tenant.encrypt_public_key = generate_key_pair(tenant.id)
+
+    db.session.query(Provider).filter(Provider.provider_type == 'custom').delete()
+    db.session.commit()
+
+    click.echo(click.style('Congratulations! '
+                           'the asymmetric key pair of workspace {} has been reset.'.format(tenant.id), fg='green'))
+
+
 @click.command('generate-invitation-codes', help='Generate invitation codes.')
 @click.option('--batch', help='The batch of invitation codes.')
 @click.option('--count', prompt=True, help='Invitation codes count.')
@@ -131,30 +165,127 @@ def generate_upper_string():
     return result
 
 
-@click.command('gen-recommended-apps', help='Number of records to generate')
-def generate_recommended_apps():
-    print('Generating recommended app data...')
-    apps = App.query.all()
-    for app in apps:
-        recommended_app = RecommendedApp(
-            app_id=app.id,
-            description={
-                'en': 'Description for ' + app.name,
-                'zh': '描述 ' + app.name
-            },
-            copyright='Copyright ' + str(random.randint(1990, 2020)),
-            privacy_policy='https://privacypolicy.example.com',
-            category=random.choice(['Games', 'News', 'Music', 'Sports']),
-            position=random.randint(1, 100),
-            install_count=random.randint(100, 100000)
-        )
-        db.session.add(recommended_app)
-    db.session.commit()
-    print('Done!')
+@click.command('recreate-all-dataset-indexes', help='Recreate all dataset indexes.')
+def recreate_all_dataset_indexes():
+    click.echo(click.style('Start recreate all dataset indexes.', fg='green'))
+    recreate_count = 0
+
+    page = 1
+    while True:
+        try:
+            datasets = db.session.query(Dataset).filter(Dataset.indexing_technique == 'high_quality') \
+                .order_by(Dataset.created_at.desc()).paginate(page=page, per_page=50)
+        except NotFound:
+            break
+
+        page += 1
+        for dataset in datasets:
+            try:
+                click.echo('Recreating dataset index: {}'.format(dataset.id))
+                index = IndexBuilder.get_index(dataset, 'high_quality')
+                if index and index._is_origin():
+                    index.recreate_dataset(dataset)
+                    recreate_count += 1
+                else:
+                    click.echo('passed.')
+            except Exception as e:
+                click.echo(
+                    click.style('Recreate dataset index error: {} {}'.format(e.__class__.__name__, str(e)), fg='red'))
+                continue
+
+    click.echo(click.style('Congratulations! Recreate {} dataset indexes.'.format(recreate_count), fg='green'))
+
+
+@click.command('clean-unused-dataset-indexes', help='Clean unused dataset indexes.')
+def clean_unused_dataset_indexes():
+    click.echo(click.style('Start clean unused dataset indexes.', fg='green'))
+    clean_days = int(current_app.config.get('CLEAN_DAY_SETTING'))
+    start_at = time.perf_counter()
+    thirty_days_ago = datetime.datetime.now() - datetime.timedelta(days=clean_days)
+    page = 1
+    while True:
+        try:
+            datasets = db.session.query(Dataset).filter(Dataset.created_at < thirty_days_ago) \
+                .order_by(Dataset.created_at.desc()).paginate(page=page, per_page=50)
+        except NotFound:
+            break
+        page += 1
+        for dataset in datasets:
+            dataset_query = db.session.query(DatasetQuery).filter(
+                DatasetQuery.created_at > thirty_days_ago,
+                DatasetQuery.dataset_id == dataset.id
+            ).all()
+            if not dataset_query or len(dataset_query) == 0:
+                documents = db.session.query(Document).filter(
+                    Document.dataset_id == dataset.id,
+                    Document.indexing_status == 'completed',
+                    Document.enabled == True,
+                    Document.archived == False,
+                    Document.updated_at > thirty_days_ago
+                ).all()
+                if not documents or len(documents) == 0:
+                    try:
+                        # remove index
+                        vector_index = IndexBuilder.get_index(dataset, 'high_quality')
+                        kw_index = IndexBuilder.get_index(dataset, 'economy')
+                        # delete from vector index
+                        if vector_index:
+                            vector_index.delete()
+                        kw_index.delete()
+                        # update document
+                        update_params = {
+                            Document.enabled: False
+                        }
+
+                        Document.query.filter_by(dataset_id=dataset.id).update(update_params)
+                        db.session.commit()
+                        click.echo(click.style('Cleaned unused dataset {} from db success!'.format(dataset.id),
+                                               fg='green'))
+                    except Exception as e:
+                        click.echo(
+                            click.style('clean dataset index error: {} {}'.format(e.__class__.__name__, str(e)),
+                                        fg='red'))
+    end_at = time.perf_counter()
+    click.echo(click.style('Cleaned unused dataset from db success latency: {}'.format(end_at - start_at), fg='green'))
+
+
+@click.command('sync-anthropic-hosted-providers', help='Sync anthropic hosted providers.')
+def sync_anthropic_hosted_providers():
+    click.echo(click.style('Start sync anthropic hosted providers.', fg='green'))
+    count = 0
+
+    page = 1
+    while True:
+        try:
+            tenants = db.session.query(Tenant).order_by(Tenant.created_at.desc()).paginate(page=page, per_page=50)
+        except NotFound:
+            break
+
+        page += 1
+        for tenant in tenants:
+            try:
+                click.echo('Syncing tenant anthropic hosted provider: {}'.format(tenant.id))
+                ProviderService.create_system_provider(
+                    tenant,
+                    ProviderName.ANTHROPIC.value,
+                    current_app.config['ANTHROPIC_HOSTED_QUOTA_LIMIT'],
+                    True
+                )
+                count += 1
+            except Exception as e:
+                click.echo(click.style(
+                    'Sync tenant anthropic hosted provider error: {} {}'.format(e.__class__.__name__, str(e)),
+                    fg='red'))
+                continue
+
+    click.echo(click.style('Congratulations! Synced {} anthropic hosted providers.'.format(count), fg='green'))
 
 
 def register_commands(app):
     app.cli.add_command(reset_password)
     app.cli.add_command(reset_email)
     app.cli.add_command(generate_invitation_codes)
-    app.cli.add_command(generate_recommended_apps)
+    app.cli.add_command(reset_encrypt_key_pair)
+    app.cli.add_command(recreate_all_dataset_indexes)
+    app.cli.add_command(sync_anthropic_hosted_providers)
+    app.cli.add_command(clean_unused_dataset_indexes)
