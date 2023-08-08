@@ -1,15 +1,9 @@
 const translation = {
   list: {
-<<<<<<< HEAD
-    title: "Documents",
-    desc: "All files of the dataset are shown here, and the entire dataset can be linked to QiyeGPT citations or indexed via the Chat plugin.",
-    addFile: "add file",
-=======
     title: 'Documents',
-    desc: 'All files of the dataset are shown here, and the entire dataset can be linked to Dify citations or indexed via the Chat plugin.',
+    desc: 'All files of the dataset are shown here, and the entire dataset can be linked to QiyeGPT citations or indexed via the Chat plugin.',
     addFile: 'add file',
     addPages: 'Add Pages',
->>>>>>> upstream/main
     table: {
       header: {
         fileName: 'FILE NAME',
@@ -52,11 +46,7 @@ const translation = {
         tip: 'You can upload files, sync from the website, or from webb apps like Notion, GitHub, etc.',
       },
       sync: {
-<<<<<<< HEAD
-        tip: "QiyeGPT will periodically download files from your Notion and complete processing.",
-=======
-        tip: 'Dify will periodically download files from your Notion and complete processing.',
->>>>>>> upstream/main
+        tip: 'QiyeGPT will periodically download files from your Notion and complete processing.',
       },
     },
     delete: {
