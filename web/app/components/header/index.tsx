@@ -23,7 +23,7 @@ const Header = () => {
           <div className={s.logo} />
         </Link>
         {/* @ts-expect-error Async Server Component */}
-        <GithubStar />
+        {/* <GithubStar /> */}
       </div>
       <div className='flex items-center'>
         <ExploreNav className={navClassName} />
