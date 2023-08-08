@@ -77,7 +77,7 @@ const Main: FC<IMainProps> = () => {
   const isMobile = media === MediaType.mobile
 
   useEffect(() => {
-    document.title = `${t('explore.sidebar.chat')} -  Dify`
+    document.title = `${t('explore.sidebar.chat')} -  QiyeGPT`
   }, [])
   /*
   * app info

@@ -12,7 +12,7 @@ from core.agent.agent_executor import AgentExecutor, PlanningStrategy, AgentConf
 from core.callback_handler.agent_loop_gather_callback_handler import AgentLoopGatherCallbackHandler
 from core.callback_handler.dataset_tool_callback_handler import DatasetToolCallbackHandler
 from core.callback_handler.main_chain_gather_callback_handler import MainChainGatherCallbackHandler
-from core.callback_handler.std_out_callback_handler import DifyStdOutCallbackHandler
+from core.callback_handler.std_out_callback_handler import QiyeGPTStdOutCallbackHandler
 from core.chain.sensitive_word_avoidance_chain import SensitiveWordAvoidanceChain
 from core.conversation_message_task import ConversationMessageTask
 from core.llm.llm_builder import LLMBuilder
@@ -62,7 +62,7 @@ class OrchestratorRuleParser:
                 model_name=agent_model_name,
                 temperature=0,
                 max_tokens=1500,
-                callbacks=[agent_callback, DifyStdOutCallbackHandler()]
+                callbacks=[agent_callback, QiyeGPTStdOutCallbackHandler()]
             )
 
             planning_strategy = PlanningStrategy(agent_mode_config.get('strategy', 'router'))
@@ -77,7 +77,7 @@ class OrchestratorRuleParser:
                 model_name=self.agent_summary_model_name,
                 temperature=0,
                 max_tokens=500,
-                callbacks=[DifyStdOutCallbackHandler()]
+                callbacks=[QiyeGPTStdOutCallbackHandler()]
             )
 
             tools = self.to_tools(
@@ -85,7 +85,7 @@ class OrchestratorRuleParser:
                 conversation_message_task=conversation_message_task,
                 model_name=self.agent_summary_model_name,
                 rest_tokens=rest_tokens,
-                callbacks=[agent_callback, DifyStdOutCallbackHandler()]
+                callbacks=[agent_callback, QiyeGPTStdOutCallbackHandler()]
             )
 
             if len(tools) == 0:
@@ -96,7 +96,7 @@ class OrchestratorRuleParser:
                 model_name=self.dataset_retrieve_model_name,
                 temperature=0,
                 max_tokens=500,
-                callbacks=[DifyStdOutCallbackHandler()]
+                callbacks=[QiyeGPTStdOutCallbackHandler()]
             )
 
             agent_configuration = AgentConfiguration(
@@ -216,14 +216,14 @@ class OrchestratorRuleParser:
             model_name=model_name,
             temperature=0,
             max_tokens=500,
-            callbacks=[DifyStdOutCallbackHandler()]
+            callbacks=[QiyeGPTStdOutCallbackHandler()]
         )
 
         tool = WebReaderTool(
             llm=summary_llm,
             max_chunk_length=4000,
             continue_reading=True,
-            callbacks=[DifyStdOutCallbackHandler()]
+            callbacks=[QiyeGPTStdOutCallbackHandler()]
         )
 
         return tool
@@ -242,7 +242,7 @@ class OrchestratorRuleParser:
                         "Input should be a search query.",
             func=OptimizedSerpAPIWrapper(**func_kwargs).run,
             args_schema=OptimizedSerpAPIInput,
-            callbacks=[DifyStdOutCallbackHandler()]
+            callbacks=[QiyeGPTStdOutCallbackHandler()]
         )
 
         return tool
@@ -253,7 +253,7 @@ class OrchestratorRuleParser:
             description="A tool when you want to get the current date, time, week, month or year, "
                         "and the time zone is UTC. Result is \"<date> <time> <timezone> <week>\".",
             func=helper.get_current_datetime,
-            callbacks=[DifyStdOutCallbackHandler()]
+            callbacks=[QiyeGPTStdOutCallbackHandler()]
         )
 
         return tool
@@ -266,7 +266,7 @@ class OrchestratorRuleParser:
             name="wikipedia",
             api_wrapper=WikipediaAPIWrapper(doc_content_chars_max=4000),
             args_schema=WikipediaInput,
-            callbacks=[DifyStdOutCallbackHandler()]
+            callbacks=[QiyeGPTStdOutCallbackHandler()]
         )
 
     @classmethod

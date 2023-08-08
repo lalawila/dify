@@ -14,6 +14,7 @@ WORKDIR /app/web
 
 COPY package.json /app/web/package.json
 
+RUN npm config set registry https://registry.npm.taobao.org
 RUN npm install pm2 -g
 
 RUN npm install --only=prod

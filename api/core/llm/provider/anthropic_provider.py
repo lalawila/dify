@@ -94,7 +94,7 @@ class AnthropicProvider(BaseProvider):
             quota_used = provider.quota_used if provider.quota_used is not None else 0
             quota_limit = provider.quota_limit if provider.quota_limit is not None else 0
             if quota_used >= quota_limit:
-                raise ValidateFailedError(f"Your quota for Dify Hosted OpenAI has been exhausted, "
+                raise ValidateFailedError(f"Your quota for QiyeGPT Hosted OpenAI has been exhausted, "
                                           f"please configure OpenAI or Azure OpenAI provider first.")
 
         try:
