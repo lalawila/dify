@@ -17,7 +17,6 @@ const Header = () => {
         setLocaleOnClient(value as Locale)
       }}
     />
-
   </div>
 }
 
