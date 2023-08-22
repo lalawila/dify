@@ -2,10 +2,14 @@
 import json
 import logging
 from typing import Generator, Union
+import time
+import uuid
 
 from flask import Response, stream_with_context
 from flask_restful import reqparse
 from werkzeug.exceptions import InternalServerError, NotFound
+
+from libs.text import detect
 
 import services
 from controllers.web import api
@@ -18,6 +22,8 @@ from core.llm.error import LLMBadRequestError, LLMAPIUnavailableError, LLMAuthor
     LLMRateLimitError, ProviderTokenNotInitError, QuotaExceededError, ModelCurrentlyNotSupportError
 from libs.helper import uuid_value
 from services.completion_service import CompletionService
+from extensions.ext_database import db
+from models.model import Message
 
 
 # define completion api for user
@@ -92,6 +98,9 @@ class ChatApi(WebApiResource):
 
         streaming = args['response_mode'] == 'streaming'
 
+        if not detect(args['query']):
+            return Response(response="error: sensitive", status=200, mimetype='application/json')
+
         try:
             response = CompletionService.completion(
                 app_model=app_model,
@@ -101,7 +110,7 @@ class ChatApi(WebApiResource):
                 streaming=streaming
             )
 
-            return compact_response(response)
+            return compact_response(response, args['conversation_id'])
         except services.errors.conversation.ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
         except services.errors.conversation.ConversationCompletedError:
@@ -135,7 +144,7 @@ class ChatStopApi(WebApiResource):
         return {'result': 'success'}, 200
 
 
-def compact_response(response: Union[dict | Generator]) -> Response:
+def compact_response(response: Union[dict | Generator], conversation_id: str | None = None) -> Response:
     if isinstance(response, dict):
         return Response(response=json.dumps(response), status=200, mimetype='application/json')
     else:
@@ -143,6 +152,14 @@ def compact_response(response: Union[dict | Generator]) -> Response:
             try:
                 for chunk in response:
                     yield chunk
+                if conversation_id:
+                    message = db.session.query(Message).filter(
+                           Message.conversation_id == conversation_id
+                           ).order_by(Message.created_at.desc()).first()
+                    if not detect(message.answer):
+                        message.answer = "敏感信息"
+                        db.session.commit()
+                        yield "error: sensitive"
             except services.errors.conversation.ConversationNotExistsError:
                 yield "data: " + json.dumps(api.handle_error(NotFound("Conversation Not Exists.")).get_json()) + "\n\n"
             except services.errors.conversation.ConversationCompletedError:

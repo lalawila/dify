@@ -28,6 +28,7 @@ export type IOnDataMoreInfo = {
   taskId?: string
   messageId: string
   errorMessage?: string
+  error?: string
 }
 
 export type IOnData = (message: string, isFirstMessage: boolean, moreInfo: IOnDataMoreInfo) => void
@@ -85,7 +86,6 @@ const handleStream = (response: any, onData: IOnData, onCompleted?: IOnCompleted
       try {
         lines.forEach((message) => {
           if (message.startsWith('data: ')) { // check if it starts with data:
-            // console.log(message);
             try {
               bufferObj = JSON.parse(message.substring(6)) // remove data: and parse as json
             }
@@ -118,6 +118,16 @@ const handleStream = (response: any, onData: IOnData, onCompleted?: IOnCompleted
             }
             else if (bufferObj.event === 'agent_thought') {
               onThought?.(bufferObj as any)
+            }
+          }
+          else if (message.startsWith('error: ')) {
+            const error = message.substring(7)
+            if (error === 'sensitive') {
+              onData('', isFirstMessage, {
+                conversationId: bufferObj?.conversation_id,
+                messageId: bufferObj?.id,
+                error,
+              })
             }
           }
         })

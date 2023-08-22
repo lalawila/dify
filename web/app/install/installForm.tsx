@@ -1,7 +1,6 @@
 'use client'
 import React, { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useContext } from 'use-context-selector'
 import Toast from '../components/base/toast'
@@ -68,10 +67,11 @@ const InstallForm = () => {
 
   useEffect(() => {
     fetchSetupStatus().then((res: SetupStatusResponse) => {
-      if (res.step === 'finished')
-        window.location.href = '/signin'
-      else
-        setLoading(false)
+      setLoading(false)
+      // if (res.step === 'finished')
+      //   window.location.href = '/signin'
+      // else
+      //   setLoading(false)
     })
   }, [])
 
