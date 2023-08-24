@@ -473,8 +473,17 @@ const Main: FC<IMainProps> = ({
         setAbortController(abortController)
       },
       onData: (message: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId, taskId, error }: any) => {
-        if (error)
+        if (error === 'question-sensitive') {
+          const cl = getChatList()
+          cl.pop()
+          cl[cl.length - 1].content = '敏感信息'
+          setChatList(cl)
+          return
+        }
+        else if (error === 'answer-sensitive') {
           responseItem.content = '敏感信息'
+          return
+        }
 
         responseItem.content = responseItem.content + message
         responseItem.id = messageId

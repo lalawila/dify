@@ -122,13 +122,11 @@ const handleStream = (response: any, onData: IOnData, onCompleted?: IOnCompleted
           }
           else if (message.startsWith('error: ')) {
             const error = message.substring(7)
-            if (error === 'sensitive') {
-              onData('', isFirstMessage, {
-                conversationId: bufferObj?.conversation_id,
-                messageId: bufferObj?.id,
-                error,
-              })
-            }
+            onData('', isFirstMessage, {
+              conversationId: bufferObj?.conversation_id,
+              messageId: bufferObj?.id,
+              error,
+            })
           }
         })
         buffer = lines[lines.length - 1]

@@ -99,7 +99,7 @@ class ChatApi(WebApiResource):
         streaming = args['response_mode'] == 'streaming'
 
         if not detect(args['query']):
-            return Response(response="error: sensitive", status=200, mimetype='application/json')
+            return Response(response="error: question-sensitive", status=200, mimetype='application/json')
 
         try:
             response = CompletionService.completion(
@@ -159,7 +159,7 @@ def compact_response(response: Union[dict | Generator], conversation_id: str | N
                     if not detect(message.answer):
                         message.answer = "敏感信息"
                         db.session.commit()
-                        yield "error: sensitive"
+                        yield "error: answer-sensitive"
             except services.errors.conversation.ConversationNotExistsError:
                 yield "data: " + json.dumps(api.handle_error(NotFound("Conversation Not Exists.")).get_json()) + "\n\n"
             except services.errors.conversation.ConversationCompletedError:
