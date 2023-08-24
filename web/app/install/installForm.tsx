@@ -35,6 +35,10 @@ const InstallForm = () => {
       showErrorMessage(t('login.error.emailEmpty'))
       return false
     }
+    if (!email.endsWith('@mhias.com')) {
+      showErrorMessage('非本企业邮箱')
+      return false
+    }
     if (!validEmailReg.test(email)) {
       showErrorMessage(t('login.error.emailInValid'))
       return false
