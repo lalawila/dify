@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import classNames from 'classnames'
 import useSWR from 'swr'
-import Link from 'next/link'
 import { useContext } from 'use-context-selector'
 import Toast from '../components/base/toast'
 import style from './page.module.css'
@@ -269,17 +268,13 @@ const NormalForm = () => {
           <div className="w-hull text-center block mt-2 text-xs text-gray-600">
             {t('login.tosDesc')}
             &nbsp;
-            <Link
+            <span
               className='text-primary-600'
-              target={'_blank'}
-              href={locale === 'en' ? 'https://docs.dify.ai/user-agreement/terms-of-service' : 'https://docs.dify.ai/v/zh-hans/yong-hu-xie-yi/fu-wu-xie-yi'}
-            >{t('login.tos')}</Link>
+            >{t('login.tos')}</span>
             &nbsp;&&nbsp;
-            <Link
+            <span
               className='text-primary-600'
-              target={'_blank'}
-              href={locale === 'en' ? 'https://docs.dify.ai/user-agreement/privacy-policy' : 'https://docs.dify.ai/v/zh-hans/yong-hu-xie-yi/yin-si-xie-yi'}
-            >{t('login.pp')}</Link>
+            >{t('login.pp')}</span>
           </div>
 
         </div>

@@ -1,5 +1,5 @@
 const translation = {
-  pageTitle: '嗨，近来可好 👋',
+  pageTitle: '三菱重工空调AI办公工具系统',
   welcome: '欢迎来到 QiyeGPT, 登录以继续',
   email: '邮箱',
   emailPlaceholder: '输入邮箱地址',
@@ -10,8 +10,8 @@ const translation = {
   forget: '忘记密码？',
   signBtn: '登录',
   installBtn: '设置',
-  setAdminAccount: '设置管理员账户',
-  setAdminAccountDesc: '管理员拥有的最大权限，可用于创建应用和管理 LLM 供应商等。',
+  setAdminAccount: '企业员工账号注册',
+  setAdminAccountDesc: '仅限三菱重工空调员工用公司邮箱注册',
   createAndSignIn: '创建账户',
   oneMoreStep: '还差一步',
   createSample: '基于这些信息，我们将为您创建一个示例应用',

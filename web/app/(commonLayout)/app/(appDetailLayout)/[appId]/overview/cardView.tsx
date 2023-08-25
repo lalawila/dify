@@ -75,11 +75,11 @@ const CardView: FC<ICardViewProps> = ({ appId }) => {
         onChangeStatus={onChangeSiteStatus}
         onGenerateCode={onGenerateCode}
         onSaveSiteConfig={onSaveSiteConfig} />
-      <AppCard
+      {/* <AppCard
         className='ml-3 flex-1'
         cardType='api'
         appInfo={response}
-        onChangeStatus={onChangeApiStatus} />
+        onChangeStatus={onChangeApiStatus} /> */}
     </div>
   )
 }
