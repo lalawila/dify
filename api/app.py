@@ -43,7 +43,6 @@ class QiyeGPTApp(Flask):
 # Configuration
 # -------------
 
-
 config_type = os.getenv('EDITION', default='SELF_HOSTED')  # ce edition first
 
 # ----------------------------
