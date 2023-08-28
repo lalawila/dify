@@ -6,14 +6,16 @@ from alibabacloud_tea_util import models as util_models
 import json
 import uuid
 
+import os
+
 config = Config(
     # 阿里云账号AccessKey拥有所有API的访问权限，建议您使用RAM用户进行API访问或日常运维。
     # 强烈建议不要把AccessKey ID和AccessKey Secret保存到工程代码里，否则可能导致AccessKey泄露，威胁您账号下所有资源的安全。
     # 常见获取环境变量方式：
     # 获取RAM用户AccessKey ID：os.environ['ALIBABA_CLOUD_ACCESS_KEY_ID']
     # 获取RAM用户AccessKey Secret：os.environ['ALIBABA_CLOUD_ACCESS_KEY_SECRET']
-    access_key_id='LTAI5tDRcaR3fXRuytgfv8Zu',
-    access_key_secret='oVYjJYHdTK1hr8zBKDJcd74qGUKNif',
+    access_key_id=os.getenv('ALI_KEY_ID'),
+    access_key_secret=os.getenv('ALI_KEY_SECRECT'),
     # 连接时超时时间，单位毫秒（ms）。
     connect_timeout=3000,
     # 读取时超时时间，单位毫秒（ms）。
