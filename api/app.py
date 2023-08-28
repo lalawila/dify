@@ -17,7 +17,7 @@ import flask_login
 from flask_cors import CORS
 
 from extensions import ext_session, ext_celery, ext_sentry, ext_redis, ext_login, ext_migrate, \
-    ext_database, ext_storage, ext_mail
+    ext_database, ext_storage, ext_mail, ext_admin
 from extensions.ext_database import db
 from extensions.ext_login import login_manager
 
@@ -87,6 +87,7 @@ def initialize_extensions(app):
     ext_login.init_app(app)
     ext_mail.init_app(app)
     ext_sentry.init_app(app)
+    ext_admin.init_app(app)
 
 
 # Flask-Login configuration
@@ -233,5 +234,5 @@ def threads():
 
 
 if __name__ == '__main__':
-    # app.run(host='0.0.0.0', port=5001, debug=True)
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=5001, debug=True)
+    # app.run(host='0.0.0.0', port=5001)
