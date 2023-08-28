@@ -120,6 +120,8 @@ services:
       - db
       - redis
       - weaviate
+    ports:
+      - "5001:5001"
     volumes:
       # Mount the storage directory to the container, for storing user files.
       - ./volumes/app/storage:/app/api/storage
