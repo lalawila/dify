@@ -218,6 +218,10 @@ const baseFetch = (
           if (!/^(2|3)\d{2}$/.test(res.status)) {
             const bodyJson = res.json()
             switch (res.status) {
+              case 470:{
+                Toast.notify({ type: 'error', message: '邮箱已经存在' })
+                break
+              }
               case 401: {
                 if (isPublicAPI) {
                   Toast.notify({ type: 'error', message: 'Invalid token' })

@@ -8,6 +8,8 @@ class AccountNotFound(BaseServiceError):
 class AccountRegisterError(BaseServiceError):
     pass
 
+class AccountAlreadyExistsError(BaseServiceError):
+    pass
 
 class AccountLoginError(BaseServiceError):
     pass

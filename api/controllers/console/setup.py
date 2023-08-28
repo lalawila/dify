@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 from functools import wraps
+from services.errors.account import AccountAlreadyExistsError
 
 import flask_login
 from flask import request, current_app
@@ -51,20 +52,24 @@ class SetupApi(Resource):
         args = parser.parse_args()
 
         # Register
-        account = RegisterService.register(
-            email=args['email'],
-            name=args['name'],
-            password=args['password']
-        )
+        try:
+            account = RegisterService.register(
+                email=args['email'],
+                name=args['name'],
+                password=args['password']
+            )
 
-        if not get_setup_status():
-            setup()
+            if not get_setup_status():
+                setup()
 
-        # Login
-        flask_login.login_user(account)
-        AccountService.update_last_login(account, request)
+            # Login
+            flask_login.login_user(account)
+            AccountService.update_last_login(account, request)
 
-        return {'result': 'success'}, 201
+            return {'result': 'success'}, 201
+        except AccountAlreadyExistsError as e:
+            return {'code': 10001 }, 470
+
 
 
 def setup():

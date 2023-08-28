@@ -12,7 +12,7 @@ from sqlalchemy import func
 
 from events.tenant_event import tenant_was_created
 from extensions.ext_redis import redis_client
-from services.errors.account import AccountLoginError, CurrentPasswordIncorrectError, LinkAccountIntegrateError, \
+from services.errors.account import AccountAlreadyExistsError, AccountLoginError, CurrentPasswordIncorrectError, LinkAccountIntegrateError, \
     TenantNotFound, AccountNotLinkTenantError, InvalidActionError, CannotOperateSelfError, MemberNotInTenantError, \
     RoleAlreadyAssignedError, NoPermissionError, AccountRegisterError, AccountAlreadyInTenantError
 from libs.helper import get_remote_ip
@@ -72,6 +72,12 @@ class AccountService:
                        interface_language: str = 'en-US', interface_theme: str = 'light',
                        timezone: str = 'America/New_York', ) -> Account:
         """create account"""
+
+        account = db.session.query(Account).filter(Account.email == email).first()
+        if account:
+            raise AccountAlreadyExistsError("Account already exists")
+
+
         account = Account()
         account.email = email
         account.name = name
@@ -364,6 +370,8 @@ class RegisterService:
             account.current_tenant = tenant
 
             db.session.commit()
+        except AccountAlreadyExistsError as e:
+            raise e
         except Exception as e:
             db.session.rollback()  # todo: do not work
             logging.error(f'Register failed: {e}')
