@@ -93,6 +93,10 @@ def initialize_extensions(app):
 @login_manager.user_loader
 def load_user(user_id):
     """Load user based on the user_id."""
+
+    if request.path.startswith('/admin'):
+        return ext_admin.ini_admin_user(user_id)
+
     if request.blueprint == 'console':
         # Check if the user_id contains a dot, indicating the old format
         if '.' in user_id:
@@ -101,7 +105,6 @@ def load_user(user_id):
             account_id = user_id
 
         account = db.session.query(Account).filter(Account.id == account_id).first()
-
         if account:
             if account.status == AccountStatus.BANNED.value or account.status == AccountStatus.CLOSED.value:
                 raise Forbidden('Account is banned or closed.')
@@ -233,5 +236,5 @@ def threads():
 
 
 if __name__ == '__main__':
-    # app.run(host='0.0.0.0', port=5001, debug=True)
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=5001, debug=True)
+    # app.run(host='0.0.0.0', port=5001)
