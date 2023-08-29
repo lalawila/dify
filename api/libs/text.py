@@ -6,7 +6,11 @@ from alibabacloud_tea_util import models as util_models
 import json
 import uuid
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
+
 
 config = Config(
     # 阿里云账号AccessKey拥有所有API的访问权限，建议您使用RAM用户进行API访问或日常运维。
