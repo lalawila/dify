@@ -75,20 +75,20 @@ class MyAdminIndexView(AdminIndexView):
 # Create customized model view class
 class MyModelView(sqla.ModelView):
     def is_accessible(self):
-        return login.current_user.is_active
+        return True
 
 class AccountAdmin(MyModelView):
     pass
 
 def init_app(app):
-    login_manager = login.LoginManager()
-    login_manager.init_app(app)
+#     login_manager = login.LoginManager()
+#     login_manager.init_app(app)
 
-    # Create user loader function
-    @login_manager.user_loader
-    def load_user(user_id):
-        if user_id == 1:
-            return User()
+#     # Create user loader function
+#     @login_manager.user_loader
+#     def load_user(user_id):
+#         if user_id == 1:
+#             return User()
 
     # Create admin
     admin = Admin(app, name='Admin',index_view=MyAdminIndexView(), base_template='my_master.html', template_mode='bootstrap4')
