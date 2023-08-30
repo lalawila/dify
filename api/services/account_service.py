@@ -410,7 +410,7 @@ class RegisterService:
         send_invite_member_mail_task.delay(
             to=email,
             token=cls.generate_invite_token(tenant, account),
-            inviter_name=inviter.name if inviter else 'QiyeGPT',
+            inviter_name=inviter.name if inviter else 'Dify',
             workspace_id=tenant.id,
             workspace_name=tenant.name,
         )

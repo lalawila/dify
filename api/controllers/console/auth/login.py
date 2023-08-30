@@ -35,7 +35,7 @@ class LoginApi(Resource):
         try:
             TenantService.switch_tenant(account)
         except Exception:
-            raise AccountNotLinkTenantError("Account not link tenant")
+            pass
 
         flask_login.login_user(account, remember=args['remember_me'])
         AccountService.update_last_login(account, request)
@@ -78,14 +78,14 @@ class ResetPasswordApi(Resource):
         message = {
             'from_email': 'noreply@example.com',
             'to': [{'email': account.email}],
-            'subject': 'Reset your QiyeGPT password',
+            'subject': 'Reset your Dify password',
             'html': """
                 <p>Dear User,</p>
-                <p>The QiyeGPT team has generated a new password for you, details as follows:</p> 
+                <p>The Dify team has generated a new password for you, details as follows:</p> 
                 <p><strong>{new_password}</strong></p>
                 <p>Please change your password to log in as soon as possible.</p>
                 <p>Regards,</p>
-                <p>The QiyeGPT Team</p> 
+                <p>The Dify Team</p> 
             """
         }
 

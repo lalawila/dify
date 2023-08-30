@@ -131,10 +131,14 @@ services:
   # worker service
   # The Celery worker for processing the queue.
   worker:
+<<<<<<< HEAD
     # image: langgenius/dify-api:latest
     build:
       context: ../api
       # dockerfile: ./api/Dockerfile
+=======
+    image: langgenius/dify-api:0.3.18
+>>>>>>> upstream/main
     restart: always
     environment:
       # Startup mode, 'worker' starts the Celery worker for processing the queue.
@@ -186,10 +190,14 @@ services:
 
   # Frontend web application.
   web:
+<<<<<<< HEAD
     # image: langgenius/dify-web:latest
     build:
       context: ../web
       # dockerfile: ./web/Dockerfile
+=======
+    image: langgenius/dify-web:0.3.18
+>>>>>>> upstream/main
     restart: always
     environment:
       EDITION: SELF_HOSTED

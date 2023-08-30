@@ -1,6 +1,6 @@
 from langchain.callbacks import CallbackManager
 from llama_index import ServiceContext, PromptHelper, LLMPredictor
-from core.callback_handler.std_out_callback_handler import QiyeGPTStdOutCallbackHandler
+from core.callback_handler.std_out_callback_handler import DifyStdOutCallbackHandler
 from core.embedding.openai_embedding import OpenAIEmbedding
 from core.llm.llm_builder import LLMBuilder
 
@@ -12,7 +12,7 @@ class IndexBuilder:
         num_output = 512
 
         # only for verbose
-        callback_manager = CallbackManager([QiyeGPTStdOutCallbackHandler()])
+        callback_manager = CallbackManager([DifyStdOutCallbackHandler()])
 
         llm = LLMBuilder.to_llm(
             tenant_id=tenant_id,
