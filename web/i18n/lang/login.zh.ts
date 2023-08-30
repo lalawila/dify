@@ -1,5 +1,5 @@
 const translation = {
-  pageTitle: '三菱重工空调AI办公工具系统',
+  pageTitle: '三菱重工空调AI办公系统',
   welcome: '欢迎来到 QiyeGPT, 登录以继续',
   email: '邮箱',
   emailPlaceholder: '输入邮箱地址',
