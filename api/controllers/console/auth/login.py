@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+from models.account import TenantAccountJoin
 import flask
 import flask_login
 from flask import request, current_app
@@ -33,7 +34,8 @@ class LoginApi(Resource):
             return {'code': 'unauthorized', 'message': 'Invalid email or password'}, 401
 
         try:
-            TenantService.switch_tenant(account)
+            join = TenantAccountJoin.query.filter_by(account_id=account.id).order_by(TenantAccountJoin.created_at.desc()).first()
+            TenantService.switch_tenant(account, join.tenant_id)
         except Exception:
             pass
 

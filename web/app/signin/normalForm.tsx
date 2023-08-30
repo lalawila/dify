@@ -96,7 +96,8 @@ const NormalForm = () => {
           remember_me: true,
         },
       })
-      router.push('/apps')
+      // router.push('/apps')
+      window.location.href = '/apps'
     }
     finally {
       setIsLoading(false)
