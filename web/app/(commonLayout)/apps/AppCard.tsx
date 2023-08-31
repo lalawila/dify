@@ -141,11 +141,12 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         className={style.listItem}
       >
         <div className={style.listItemTitle}>
-          <AppIcon
+          {/* <AppIcon
             size="small"
             icon={app.icon}
             background={app.icon_background}
-          />
+          /> */}
+          <img className='w-9 h-9 rounded-lg' src="/logo2.png" alt="icon" />
           <div className={style.listItemHeading}>
             <div className={style.listItemHeadingContent}>{app.name}</div>
           </div>

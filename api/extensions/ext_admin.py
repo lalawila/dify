@@ -1,5 +1,6 @@
 from extensions.ext_database import db
 from models.account import Account, Tenant
+from models.model import App
 
 from flask import Flask, url_for, redirect, render_template, request
 
@@ -93,3 +94,4 @@ def init_app(app):
     # Add views
     admin.add_view(AccountAdmin(Account, db.session))
     admin.add_view(MyModelView(Tenant, db.session))
+    admin.add_view(MyModelView(App, db.session))
