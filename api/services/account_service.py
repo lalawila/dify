@@ -74,11 +74,17 @@ class AccountService:
         """create account"""
 
         account = db.session.query(Account).filter(Account.email == email).first()
+
+        is_create = True
         if account:
-            raise AccountAlreadyExistsError("Account already exists")
+            if account.status != AccountStatus.PENDING.value:
+                raise AccountAlreadyExistsError("Account already exists")
 
+            is_create = False
+            account.status = AccountStatus.ACTIVE.value
+        else:
+            account = Account()
 
-        account = Account()
         account.email = email
         account.name = name
 
@@ -102,7 +108,8 @@ class AccountService:
         else:
             account.timezone = timezone
 
-        db.session.add(account)
+        if is_create:
+            db.session.add(account)
         db.session.commit()
         return account
 
