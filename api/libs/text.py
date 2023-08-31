@@ -69,12 +69,30 @@ def detect(text: str):
         if result.code == 200:
             resultData = result.data
             # print('labels:{}, reason:{}'.format(resultData.labels, resultData.reason))
+            # print(resultData)
+
+            bans = ["ad",
+            "political_content",
+            "profanity",
+            "contraband",
+            "sexual_content",
+            "violence",
+            "nonsense",
+            "negative_content",
+            "religion",
+            "cyberbullying",
+            "ad_compliance",
+            "C_customized",]
+
             if resultData.labels != '':
-                return False
-                # ,{
-                #     'labels': resultData.labels,
-                #     'reason': resultData.reason,
-                # }
+                for label in resultData.labels.split(','):
+                    for ban in bans:
+                        if label.strip() in ban:
+                            return False
+                            # ,{
+                            #     'labels': resultData.labels,
+                            #     'reason': resultData.reason,
+                            # }
             return True
     else:
         print('response not success. status:{} ,result:{}'.format(response.status_code, response))
