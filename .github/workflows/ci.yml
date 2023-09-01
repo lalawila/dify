@@ -8,8 +8,9 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: executing remote ssh commands using password
-              uses: appleboy/ssh-action@v0.1.8
+              uses: appleboy/ssh-action@v1.0.0
               with:
+                  command_timeout: 30m
                   host: 8.219.239.133
                   username: root
                   key: ${{ secrets.KEY }}
