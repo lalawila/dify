@@ -71,18 +71,13 @@ def detect(text: str):
             # print('labels:{}, reason:{}'.format(resultData.labels, resultData.reason))
             # print(resultData)
 
-            bans = ["ad",
+            bans = [
             "political_content",
-            "profanity",
             "contraband",
             "sexual_content",
             "violence",
-            "nonsense",
-            "negative_content",
             "religion",
-            "cyberbullying",
-            "ad_compliance",
-            "C_customized",]
+            ]
 
             if resultData.labels != '':
                 for label in resultData.labels.split(','):
