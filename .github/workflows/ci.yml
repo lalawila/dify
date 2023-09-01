@@ -4,6 +4,7 @@ on: [push]
 jobs:
     build:
         name: DEPLOY
+        timeout-minutes: 30
         runs-on: ubuntu-latest
         steps:
             - name: executing remote ssh commands using password
