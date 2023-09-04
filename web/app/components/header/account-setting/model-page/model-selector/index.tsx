@@ -112,11 +112,11 @@ const ModelSelector: FC<Props> = ({
                   value
                     ? (
                       <>
-                        <ModelIcon
+                        {/* <ModelIcon
                           className={cn('mr-1.5', !triggerIconSmall && 'w-5 h-5')}
                           modelId={value.modelName}
                           providerName={value.providerName}
-                        />
+                        /> */}
                         <div className='mr-1.5 grow text-left text-sm text-gray-900 truncate'><ModelName modelId={value.modelName} modelDisplayName={currModel?.model_display_name} /></div>
                       </>
                     )
@@ -201,11 +201,11 @@ const ModelSelector: FC<Props> = ({
                           onChange(selectedModel as BackendModel)
                         }}
                       >
-                        <ModelIcon
+                        {/* <ModelIcon
                           className='mr-2 shrink-0'
                           modelId={model.value}
                           providerName={model.providerName}
-                        />
+                        /> */}
                         <div className='grow text-left text-sm text-gray-900 truncate'><ModelName modelId={model.value} modelDisplayName={model.modelDisplayName} /></div>
                         { (value?.providerName === model.providerName && value?.modelName === model.value) && <Check className='shrink-0 w-4 h-4 text-primary-600' /> }
                       </Popover.Button>

@@ -6,8 +6,8 @@ import { IS_CE_EDITION } from '@/config'
 const config: ProviderConfig = {
   selector: {
     name: {
-      'en': 'OpenAI',
-      'zh-Hans': 'OpenAI',
+      'en': 'AI',
+      'zh-Hans': 'AI',
     },
     icon: <OpenaiBlack className='w-full h-full' />,
   },
@@ -19,23 +19,23 @@ const config: ProviderConfig = {
     },
     subTitleIcon: <OpenaiBlack className='w-6 h-6' />,
     desc: {
-      'en': 'Models provided by OpenAI, such as GPT-3.5-Turbo and GPT-4.',
-      'zh-Hans': 'OpenAI 提供的模型，例如 GPT-3.5-Turbo 和 GPT-4。',
+      'en': 'Models provided by AI, such as AI-3.5-Turbo and AI-4.',
+      'zh-Hans': 'AI 提供的模型，例如 AI-3.5-Turbo 和 AI-4。',
     },
     bgColor: 'bg-gray-200',
   },
   modal: {
     key: ProviderEnum.openai,
     title: {
-      'en': 'OpenAI',
-      'zh-Hans': 'OpenAI',
+      'en': 'AI',
+      'zh-Hans': 'AI',
     },
     icon: <OpenaiTransparent className='w-6 h-6' />,
     link: {
       href: 'https://platform.openai.com/account/api-keys',
       label: {
-        'en': 'Get your API key from OpenAI',
-        'zh-Hans': '从 OpenAI 获取 API Key',
+        'en': 'Get your API key from AI',
+        'zh-Hans': '从 AI 获取 API Key',
       },
     },
     validateKeys: ['openai_api_key'],
@@ -81,8 +81,8 @@ const config: ProviderConfig = {
               'zh-Hans': '在此输入您的 API 域名，如：https://example.com/xxx（选填）',
             },
             help: {
-              'en': 'You can configure your server compatible with the OpenAI API specification, or proxy mirror address',
-              'zh-Hans': '可配置您的兼容 OpenAI API 规范的服务器，或者代理镜像地址',
+              'en': 'You can configure your server compatible with the AI API specification, or proxy mirror address',
+              'zh-Hans': '可配置您的兼容 AI API 规范的服务器，或者代理镜像地址',
             },
           }]
           : []

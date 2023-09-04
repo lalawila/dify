@@ -35,12 +35,12 @@ const ModelCard: FC<ModelCardProps> = ({
     <div className='rounded-xl border-[0.5px] border-gray-200 shadow-xs'>
       <div className={`flex px-4 pt-4 pb-3 rounded-t-lg ${modelItem.bgColor}`}>
         <div className='grow mr-3'>
-          <div className='mb-1'>
+          {/* <div className='mb-1'>
             {modelItem.titleIcon[locale]}
-          </div>
+          </div> */}
           <div className='h-9 text-xs text-black opacity-60'>{modelItem.desc?.[locale]}</div>
         </div>
-        {modelItem.subTitleIcon}
+        {/* {modelItem.subTitleIcon} */}
       </div>
       {
         !IS_CE_EDITION && currentProvider && <Quota currentProvider={currentProvider} />

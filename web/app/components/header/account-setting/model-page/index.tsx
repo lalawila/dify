@@ -35,7 +35,7 @@ import I18n from '@/context/i18n'
 
 const MODEL_CARD_LIST = [
   config.openai,
-  config.anthropic,
+  // config.anthropic,
 ]
 
 const titleClassName = `
@@ -309,7 +309,7 @@ const ModelPage = () => {
           ))
         }
       </div>
-      {
+      {/* {
         modelList.slice(0, showMoreModel ? modelList.length : 3).map((model, index) => (
           <ModelItem
             key={index}
@@ -320,15 +320,15 @@ const ModelPage = () => {
             onUpdate={mutateProviders}
           />
         ))
-      }
-      {
+      } */}
+      {/* {
         !showMoreModel && (
           <div className='inline-flex items-center px-1 h-[26px] cursor-pointer' onClick={() => setShowMoreModel(true)}>
             <ChevronDownDouble className='mr-1 w-3 h-3 text-gray-500' />
             <div className='text-xs font-medium text-gray-500'>{t('common.modelProvider.showMoreModelProvider')}</div>
           </div>
         )
-      }
+      } */}
       <ModelModal
         isShow={showModal}
         modelModal={modelModalConfig}

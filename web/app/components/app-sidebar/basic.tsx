@@ -60,7 +60,8 @@ export default function AppBasic({ icon, icon_background, name, type, hoverTip, 
     <div className="flex items-start">
       {icon && icon_background && iconType === 'app' && (
         <div className='flex-shrink-0 mr-3'>
-          <AppIcon icon={icon} background={icon_background} />
+          {/* <AppIcon icon={icon} background={icon_background} /> */}
+          <img className='w-9 h-9 rounded-lg' src="/logo2.png" alt="icon" />
         </div>
       )}
       {iconType !== 'app'

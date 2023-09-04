@@ -54,18 +54,18 @@ export default function AccountSetting({
           icon: <CubeOutline className={iconClassName} />,
           activeIcon: <CubeOutline className={iconClassName} />,
         },
-        {
-          key: 'data-source',
-          name: t('common.settings.dataSource'),
-          icon: <Database03 className={iconClassName} />,
-          activeIcon: <Database03Solid className={iconClassName} />,
-        },
-        {
-          key: 'plugin',
-          name: t('common.settings.plugin'),
-          icon: <PuzzlePiece01 className={iconClassName} />,
-          activeIcon: <PuzzlePiece01Solid className={iconClassName} />,
-        },
+        // {
+        //   key: 'data-source',
+        //   name: t('common.settings.dataSource'),
+        //   icon: <Database03 className={iconClassName} />,
+        //   activeIcon: <Database03Solid className={iconClassName} />,
+        // },
+        // {
+        //   key: 'plugin',
+        //   name: t('common.settings.plugin'),
+        //   icon: <PuzzlePiece01 className={iconClassName} />,
+        //   activeIcon: <PuzzlePiece01Solid className={iconClassName} />,
+        // },
       ],
     },
     {
@@ -78,12 +78,12 @@ export default function AccountSetting({
           icon: <User01 className={iconClassName} />,
           activeIcon: <User01Solid className={iconClassName} />,
         },
-        {
-          key: 'integrations',
-          name: t('common.settings.integrations'),
-          icon: <AtSign className={iconClassName} />,
-          activeIcon: <AtSign className={iconClassName} />,
-        },
+        // {
+        //   key: 'integrations',
+        //   name: t('common.settings.integrations'),
+        //   icon: <AtSign className={iconClassName} />,
+        //   activeIcon: <AtSign className={iconClassName} />,
+        // },
         {
           key: 'language',
           name: t('common.settings.language'),
