@@ -64,6 +64,7 @@ const useLazyLoad = (ref: RefObject<Element>): boolean => {
 
 export function Markdown(props: { content: string }) {
   const [isCopied, setIsCopied] = useState(false)
+  const content = props.content.replace(/(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*))/g, ' $1 ')
   return (
     <div className="markdown-body">
       <ReactMarkdown
@@ -121,7 +122,7 @@ export function Markdown(props: { content: string }) {
         linkTarget={'_blank'}
       >
         {/* Markdown detect has problem. */}
-        {props.content}
+        {content}
       </ReactMarkdown>
     </div>
   )
