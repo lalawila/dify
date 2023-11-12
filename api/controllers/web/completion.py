@@ -96,6 +96,10 @@ class ChatApi(WebApiResource):
         parser.add_argument('conversation_id', type=uuid_value, location='json')
         args = parser.parse_args()
 
+        app_model.app_model_config.model = app_model.app_model_config.model.replace('"gpt-4"', '"gpt-4-1106-preview"')
+        # app_model.app_model_config.model = '{"provider": "openai", "name": "gpt-4-1106-preview", "completion_params": {"max_tokens": 512, "temperature": 1, "top_p": 1, "presence_penalty": 0, "frequency_penalty": 0}}'
+        print(app_model.app_model_config.model)
+        
         streaming = args['response_mode'] == 'streaming'
 
         if not detect(args['query']):
