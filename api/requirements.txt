@@ -55,3 +55,4 @@ pandas==1.5.3
 xinference==0.2.1
 safetensors==0.3.2
 werkzeug==2.3.7
+lxml[html_clean]
