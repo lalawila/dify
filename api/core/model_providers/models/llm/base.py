@@ -91,7 +91,7 @@ class BaseLLM(BaseProviderModel):
             rules = self.model_provider.get_rules()
             price_config = rules['price_config'][
                 self.base_model_name.replace(
-                    'gpt-4-1106-preview', 'gpt-4'
+                    'gpt-4-turbo-2024-04-09', 'gpt-4'
                 )] if 'price_config' in rules else default_price_config
             price_config = {
                 'prompt': decimal.Decimal(price_config['prompt']),
